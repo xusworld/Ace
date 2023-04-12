@@ -7,7 +7,8 @@ project(ace C CXX)
 include(cmake/color.cmake)
 include(cmake/utils.cmake)
 
-set(CMAKE_EXPORT_COMPILE_COMMANDS YES)
+# set(CMAKE_C_COMPILER "/usr/bin/gcc")
+# set(CMAKE_CXX_COMPILER "/usr/bin/g++")
 
 set(VERSION_MAJOR "0")
 set(VERSION_MINOR "1")
@@ -107,6 +108,8 @@ else()
     endif()
 endif(CMAKE_BUILD_TYPE MATCHES Debug)
 
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -std=c++14 -m64 -mavx512f -mfma -mavx512vl -mavx512bw -mavx512dq ")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -std=c++14 -m64 -mavx512f -mfma -mavx512vl -mavx512bw -mavx512dq ")
 
 message(STATUS "CMAKE_C_FLAGS: " ${CMAKE_C_FLAGS})
 message(STATUS "CMAKE_CXX_FLAGS: " ${CMAKE_CXX_FLAGS})

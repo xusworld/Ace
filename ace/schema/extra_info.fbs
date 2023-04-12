@@ -1,0 +1,9 @@
+include "tensor.fbs";
+
+namespace ace;
+
+table ExtraInfo {
+    buffer:[int8];
+    name: string;
+    version: string;
+}
