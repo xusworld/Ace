@@ -38,5 +38,5 @@ nv_gpu_build
 ios_build
 gpu_build
 output
-onnx
+models
 third-party
