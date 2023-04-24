@@ -1,18 +1,17 @@
-#include "ace/schema/ace_generated.h"
-#include "src/onnx/onnx_op_converter.h"
-#include "src/onnx/onnx_op_converter_register.h"
-#include "src/onnx/onnx_scope.h"
+#include <stdio.h>
+
+#include "../onnx_node_parser_manager.h"
 
 namespace ace {
-namespace converter {
+namespace parser {
 
-DECLARE_OP_CONVERTER(ConcatOnnx);
+DECLARE_ONNX_NODE_PARSER(ConcatOnnx);
 
 ace::OpType ConcatOnnx::opType() { return ace::OpType_Concat; }
 ace::OpParameter ConcatOnnx::type() { return ace::OpParameter_Axis; }
 
-void ConcatOnnx::run(ace::OpT* dstOp, const onnx::NodeProto* onnxNode,
-                     OnnxScope* scope) {
+void ConcatOnnx::parse(ace::OpT* dstOp, const onnx::NodeProto* onnxNode,
+                       std::vector<const onnx::TensorProto*> initializers) {
   auto para = new ace::AxisT;
   para->axis = 0;
   for (int i = 0; i < onnxNode->attribute_size(); ++i) {
@@ -26,7 +25,7 @@ void ConcatOnnx::run(ace::OpT* dstOp, const onnx::NodeProto* onnxNode,
   dstOp->main.value = para;
 }
 
-REGISTER_CONVERTER(ConcatOnnx, Concat);
+REGISTER_ONNX_NODE_PARSER(ConcatOnnx, Concat);
 
-}  // namespace converter
+}  // namespace parser
 }  // namespace ace

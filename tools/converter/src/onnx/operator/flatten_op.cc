@@ -1,20 +1,16 @@
-#include <glog/logging.h>
+#include "../onnx_node_parser_manager.h"
 
-#include "ace/schema/ace_generated.h"
-#include "src/onnx/onnx_op_converter.h"
-#include "src/onnx/onnx_op_converter_register.h"
-#include "src/onnx/onnx_scope.h"
 namespace ace {
-namespace converter {
+namespace parser {
 
-DECLARE_OP_CONVERTER(FlattenOnnx);
+DECLARE_ONNX_NODE_PARSER(FlattenOnnx);
 
 ace::OpType FlattenOnnx::opType() { return ace::OpType_Flatten; }
 
 ace::OpParameter FlattenOnnx::type() { return ace::OpParameter_Flatten; }
 
-void FlattenOnnx::run(ace::OpT *dstOp, const onnx::NodeProto *onnxNode,
-                      OnnxScope *scope) {
+void FlattenOnnx::parse(ace::OpT *dstOp, const onnx::NodeProto *onnxNode,
+                        std::vector<const onnx::TensorProto *> initializers) {
   auto param = new ace::FlattenT;
 
   // Ref https://github.com/onnx/onnx/blob/master/docs/Operators.md#Flatten,
@@ -33,7 +29,7 @@ void FlattenOnnx::run(ace::OpT *dstOp, const onnx::NodeProto *onnxNode,
   dstOp->main.value = param;
 }
 
-REGISTER_CONVERTER(FlattenOnnx, Flatten);
+REGISTER_ONNX_NODE_PARSER(FlattenOnnx, Flatten);
 
-}  // namespace converter
+}  // namespace parser
 }  // namespace ace

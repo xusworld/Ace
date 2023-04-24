@@ -1,21 +1,17 @@
-#include <glog/logging.h>
-
-#include "ace/schema/ace_generated.h"
-#include "src/onnx/onnx_op_converter.h"
-#include "src/onnx/onnx_op_converter_register.h"
-#include "src/onnx/onnx_scope.h"
+#include "../onnx_node_parser_manager.h"
 
 namespace ace {
-namespace converter {
+namespace parser {
 
-DECLARE_OP_CONVERTER(GridSampleOnnx);
+DECLARE_ONNX_NODE_PARSER(GridSampleOnnx);
 
 ace::OpType GridSampleOnnx::opType() { return ace::OpType_GridSample; }
 
 ace::OpParameter GridSampleOnnx::type() { return ace::OpParameter_GridSample; }
 
-void GridSampleOnnx::run(ace::OpT *dstOp, const onnx::NodeProto *onnxNode,
-                         OnnxScope *scope) {
+void GridSampleOnnx::parse(
+    ace::OpT *dstOp, const onnx::NodeProto *onnxNode,
+    std::vector<const onnx::TensorProto *> initializers) {
   auto gridSampleParam = new ace::GridSampleT;
 
   gridSampleParam->mode = ace::SampleMode_BILINEAR;
@@ -61,13 +57,13 @@ void GridSampleOnnx::run(ace::OpT *dstOp, const onnx::NodeProto *onnxNode,
   dstOp->main.value = gridSampleParam;
 }
 
-// REGISTER_CONVERTER(GridSampleOnnx, GridSample);
+// REGISTER_ONNX_NODE_PARSER(GridSampleOnnx, GridSample);
 
 // When we export torch.nn.functional.grid_sample to onnx, it's called
 // GridSampler rather than GridSample, thus, we have to add the "r"
-#define REGISTER_CONVERTER_r(name, opType) \
-  static OnnxOpConverterRegister<name> _Convert_##opType(#opType "r")
-REGISTER_CONVERTER_r(GridSampleOnnx, GridSample);
+#define REGISTER_ONNX_NODE_PARSER_r(name, opType) \
+  static OnnxNodeParserRegister<name> _Convert_##opType(#opType "r")
+REGISTER_ONNX_NODE_PARSER_r(GridSampleOnnx, GridSample);
 
-}  // namespace converter
+}  // namespace parser
 }  // namespace ace

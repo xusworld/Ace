@@ -1,20 +1,15 @@
-#include <glog/logging.h>
-
-#include "ace/schema/ace_generated.h"
-#include "src/onnx/onnx_op_converter.h"
-#include "src/onnx/onnx_op_converter_register.h"
-#include "src/onnx/onnx_scope.h"
+#include "../onnx_node_parser_manager.h"
 
 namespace ace {
-namespace converter {
+namespace parser {
 
-DECLARE_OP_CONVERTER(ReduceOnnx);
+DECLARE_ONNX_NODE_PARSER(ReduceOnnx);
 
 ace::OpType ReduceOnnx::opType() { return ace::OpType_Reduction; }
 ace::OpParameter ReduceOnnx::type() { return ace::OpParameter_ReductionParam; }
 
-void ReduceOnnx::run(ace::OpT *dstOp, const onnx::NodeProto *onnxNode,
-                     OnnxScope *scope) {
+void ReduceOnnx::parse(ace::OpT *dstOp, const onnx::NodeProto *onnxNode,
+                       std::vector<const onnx::TensorProto *> initializers) {
   auto param = new ace::ReductionParamT;
 
   std::vector<int> axes;
@@ -49,6 +44,8 @@ void ReduceOnnx::run(ace::OpT *dstOp, const onnx::NodeProto *onnxNode,
     param->operation = ace::ReductionType_PROD;
   } else if (type == "ReduceSum") {
     param->operation = ace::ReductionType_SUM;
+  } else if (type == "ReduceSumSquare") {
+    param->operation = ace::ReductionType_SUMSQ;
   } else {
     DLOG(ERROR) << "TODO ==> " << type;
   }
@@ -59,11 +56,12 @@ void ReduceOnnx::run(ace::OpT *dstOp, const onnx::NodeProto *onnxNode,
   dstOp->main.value = param;
 }
 
-REGISTER_CONVERTER(ReduceOnnx, ReduceMean);
-REGISTER_CONVERTER(ReduceOnnx, ReduceMax);
-REGISTER_CONVERTER(ReduceOnnx, ReduceMin);
-REGISTER_CONVERTER(ReduceOnnx, ReduceProd);
-REGISTER_CONVERTER(ReduceOnnx, ReduceSum);
+REGISTER_ONNX_NODE_PARSER(ReduceOnnx, ReduceMean);
+REGISTER_ONNX_NODE_PARSER(ReduceOnnx, ReduceMax);
+REGISTER_ONNX_NODE_PARSER(ReduceOnnx, ReduceMin);
+REGISTER_ONNX_NODE_PARSER(ReduceOnnx, ReduceProd);
+REGISTER_ONNX_NODE_PARSER(ReduceOnnx, ReduceSum);
+REGISTER_ONNX_NODE_PARSER(ReduceOnnx, ReduceSumSquare);
 
-}  // namespace converter
+}  // namespace parser
 }  // namespace ace

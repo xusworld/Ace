@@ -1,18 +1,17 @@
-#include "ace/schema/ace_generated.h"
-#include "src/onnx/onnx_op_converter.h"
-#include "src/onnx/onnx_op_converter_register.h"
-#include "src/onnx/onnx_scope.h"
+#include <stdio.h>
+
+#include "../onnx_node_parser_manager.h"
 
 namespace ace {
-namespace converter {
+namespace parser {
 
-DECLARE_OP_CONVERTER(ReluOnnx);
+DECLARE_ONNX_NODE_PARSER(ReluOnnx);
 
 ace::OpType ReluOnnx::opType() { return ace::OpType_ReLU; }
 ace::OpParameter ReluOnnx::type() { return ace::OpParameter_Relu; }
 
-void ReluOnnx::run(ace::OpT* dstOp, const onnx::NodeProto* onnxNode,
-                   OnnxScope* scope) {
+void ReluOnnx::parse(ace::OpT* dstOp, const onnx::NodeProto* onnxNode,
+                     std::vector<const onnx::TensorProto*> initializers) {
   auto relu = new ace::ReluT;
 
   float slope = 0.01f;
@@ -40,8 +39,8 @@ void ReluOnnx::run(ace::OpT* dstOp, const onnx::NodeProto* onnxNode,
   dstOp->main.value = relu;
 }
 
-REGISTER_CONVERTER(ReluOnnx, Relu);
-REGISTER_CONVERTER(ReluOnnx, LeakyRelu);
+REGISTER_ONNX_NODE_PARSER(ReluOnnx, Relu);
+REGISTER_ONNX_NODE_PARSER(ReluOnnx, LeakyRelu);
 
-}  // namespace converter
+}  // namespace parser
 }  // namespace ace

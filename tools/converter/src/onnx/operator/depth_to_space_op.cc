@@ -1,12 +1,12 @@
-#include "ace/schema/ace_generated.h"
-#include "src/onnx/onnx_op_converter.h"
-#include "src/onnx/onnx_op_converter_register.h"
-#include "src/onnx/onnx_scope.h"
+#include <ace/MNNDefine.h>
+#include <stdio.h>
+
+#include "../onnx_node_parser_manager.h"
 
 namespace ace {
-namespace converter {
+namespace parser {
 
-DECLARE_OP_CONVERTER(DepthToSpaceOnnx);
+DECLARE_ONNX_NODE_PARSER(DepthToSpaceOnnx);
 
 ace::OpType DepthToSpaceOnnx::opType() { return ace::OpType_DepthToSpace; }
 
@@ -14,8 +14,9 @@ ace::OpParameter DepthToSpaceOnnx::type() {
   return ace::OpParameter_DepthSpaceParam;
 }
 
-void DepthToSpaceOnnx::run(ace::OpT* dstOp, const onnx::NodeProto* onnxNode,
-                           OnnxScope* scope) {
+void DepthToSpaceOnnx::parse(
+    ace::OpT* dstOp, const onnx::NodeProto* onnxNode,
+    std::vector<const onnx::TensorProto*> initializers) {
   auto spaceToDepthParam = new ace::DepthSpaceParamT;
 
   const auto attrSize = onnxNode->attribute_size();
@@ -32,9 +33,8 @@ void DepthToSpaceOnnx::run(ace::OpT* dstOp, const onnx::NodeProto* onnxNode,
       if (strToMode.find(modeStr) != strToMode.end()) {
         spaceToDepthParam->mode = strToMode[modeStr];
       } else {
-        // ace_ERROR("ONNX DepthToSpace mode [%s] is currently not
-        // supported.\n",
-        //           modeStr.c_str());
+        MNN_ERROR("ONNX DepthToSpace mode [%s] is currently not supported.\n",
+                  modeStr.c_str());
       }
     }
   }
@@ -42,7 +42,7 @@ void DepthToSpaceOnnx::run(ace::OpT* dstOp, const onnx::NodeProto* onnxNode,
   dstOp->main.value = spaceToDepthParam;
 }
 
-REGISTER_CONVERTER(DepthToSpaceOnnx, DepthToSpace);
+REGISTER_ONNX_NODE_PARSER(DepthToSpaceOnnx, DepthToSpace);
 
-}  // namespace converter
+}  // namespace parser
 }  // namespace ace

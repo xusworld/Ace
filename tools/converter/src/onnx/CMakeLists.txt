@@ -1,24 +1,16 @@
-message(STATUS "Generate onnx proto files...")
+protobuf_generate_cpp(ONNX_PROTO_SRCS ONNX_PROTO_HDRS
+    ${CMAKE_CURRENT_LIST_DIR}/proto/onnx.proto
+    ${CMAKE_CURRENT_LIST_DIR}/proto/onnx-operators.proto
+)
+
+file(GLOB ONNX_SRC ${CMAKE_CURRENT_LIST_DIR}/*.cc)
+file(GLOB ONNX_OPERATOR_SRC ${CMAKE_CURRENT_LIST_DIR}/operator/*.cc)
+list(APPEND ONNX_SRC ${ONNX_OPERATOR_SRC})
+
+add_library(ConverterONNX OBJECT ${ONNX_SRC} ${ONNX_PROTO_SRCS})
+add_dependencies(ConverterONNX MNNCompress)
+message(STATUS "Onnx: ${ONNX_PROTO_HDRS}")
 
 
-message(STATUS "onnx CMAKE_CURRENT_SOURCE_DIR" ${CMAKE_CURRENT_SOURCE_DIR})
-message(STATUS "IMPL_SCRS" ${IMPL_SCRS})
-
-# header files 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR})
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
-# include_directories(${ACE_ROOT})
-
-# source files
-file(GLOB IMPL_SCRS   ${CMAKE_CURRENT_SOURCE_DIR}/src/onnx/*.cc)
-message(STATUS "IMPL_SCRS" ${IMPL_SCRS})
-
-# file(GLOB ONNX_OP_SRC ${CMAKE_CURRENT_SOURCE_DIR}/src/onnx/operator/*.cc)
-set(ONNX_OP_SRC ${CMAKE_CURRENT_SOURCE_DIR}/src/onnx/operator/argmax_op.cc)
-
-message(STATUS "ONNX_OP_SRC" ${ONNX_OP_SRC})
-
-set(ONNX_PROTO_SRCS   ${CMAKE_CURRENT_SOURCE_DIR}/src/onnx/proto/onnx.pb.cc)
-
-add_library(ConverterONNX OBJECT ${IMPL_SCRS} ${ONNX_OP_SRC} ${ONNX_PROTO_SRCS})
-target_link_libraries(ConverterONNX  protobuf )
+list(APPEND MNN_CONVERTER_BACKENDS_OBJECTS $<TARGET_OBJECTS:ConverterONNX>)
+list(APPEND MNN_CONVERTER_BACKENDS_TARGETS ConverterONNX)

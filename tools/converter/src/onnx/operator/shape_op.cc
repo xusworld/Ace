@@ -1,34 +1,20 @@
-#include "ace/schema/ace_generated.h"
-#include "src/onnx/onnx_op_converter.h"
-#include "src/onnx/onnx_op_converter_register.h"
-#include "src/onnx/onnx_scope.h"
+#include <stdio.h>
+
+#include "../onnx_node_parser_manager.h"
 
 namespace ace {
-namespace converter {
+namespace parser {
 
-DECLARE_OP_CONVERTER(ShapeOnnx);
+DECLARE_ONNX_NODE_PARSER(ShapeOnnx);
 
 ace::OpType ShapeOnnx::opType() { return ace::OpType_Shape; }
 ace::OpParameter ShapeOnnx::type() { return ace::OpParameter_NONE; }
 
-void ShapeOnnx::run(ace::OpT* dstOp, const onnx::NodeProto* onnxNode,
-                    OnnxScope* scope) {
-  dstOp->defaultDimentionFormat = ace::DataFormat_NCHW;
+void ShapeOnnx::parse(ace::OpT* dstOp, const onnx::NodeProto* onnxNode,
+                      std::vector<const onnx::TensorProto*> initializers) {
+  dstOp->defaultDimentionFormat = ace::DATA_FORMAT_NCHW;
 }
 
-REGISTER_CONVERTER(ShapeOnnx, Shape);
-
-DECLARE_OP_CONVERTER(SizeOnnx);
-
-ace::OpType SizeOnnx::opType() { return ace::OpType_Size; }
-ace::OpParameter SizeOnnx::type() { return ace::OpParameter_NONE; }
-
-void SizeOnnx::run(ace::OpT* dstOp, const onnx::NodeProto* onnxNode,
-                   OnnxScope* scope) {
-  dstOp->defaultDimentionFormat = ace::DataFormat_NCHW;
-}
-
-REGISTER_CONVERTER(SizeOnnx, Size);
-
-}  // namespace converter
+REGISTER_ONNX_NODE_PARSER(ShapeOnnx, Shape);
+}  // namespace parser
 }  // namespace ace

@@ -1,12 +1,11 @@
-#include "ace/schema/ace_generated.h"
-#include "src/onnx/onnx_op_converter.h"
-#include "src/onnx/onnx_op_converter_register.h"
-#include "src/onnx/onnx_scope.h"
+#include <stdio.h>
+
+#include "../onnx_node_parser_manager.h"
 
 namespace ace {
-namespace converter {
+namespace parser {
 
-DECLARE_OP_CONVERTER(SpaceToDepthOnnx);
+DECLARE_ONNX_NODE_PARSER(SpaceToDepthOnnx);
 
 ace::OpType SpaceToDepthOnnx::opType() { return ace::OpType_SpaceToDepth; }
 
@@ -14,8 +13,9 @@ ace::OpParameter SpaceToDepthOnnx::type() {
   return ace::OpParameter_DepthSpaceParam;
 }
 
-void SpaceToDepthOnnx::run(ace::OpT* dstOp, const onnx::NodeProto* onnxNode,
-                           OnnxScope* scope) {
+void SpaceToDepthOnnx::parse(
+    ace::OpT* dstOp, const onnx::NodeProto* onnxNode,
+    std::vector<const onnx::TensorProto*> initializers) {
   auto spaceToDepthParam = new ace::DepthSpaceParamT;
 
   const auto attrSize = onnxNode->attribute_size();
@@ -30,7 +30,6 @@ void SpaceToDepthOnnx::run(ace::OpT* dstOp, const onnx::NodeProto* onnxNode,
   dstOp->main.value = spaceToDepthParam;
 }
 
-REGISTER_CONVERTER(SpaceToDepthOnnx, SpaceToDepth);
-
-}  // namespace converter
+REGISTER_ONNX_NODE_PARSER(SpaceToDepthOnnx, SpaceToDepth);
+}  // namespace parser
 }  // namespace ace

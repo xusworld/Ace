@@ -1,14 +1,9 @@
-#include <glog/logging.h>
-
-#include "ace/schema/ace_generated.h"
-#include "src/onnx/onnx_op_converter.h"
-#include "src/onnx/onnx_op_converter_register.h"
-#include "src/onnx/onnx_scope.h"
+#include "../onnx_node_parser_manager.h"
 
 namespace ace {
-namespace converter {
+namespace parser {
 
-DECLARE_OP_CONVERTER(CosineSimilarityOnnx);
+DECLARE_ONNX_NODE_PARSER(CosineSimilarityOnnx);
 
 ace::OpType CosineSimilarityOnnx::opType() {
   return ace::OpType_CosineSimilarity;
@@ -16,8 +11,9 @@ ace::OpType CosineSimilarityOnnx::opType() {
 
 ace::OpParameter CosineSimilarityOnnx::type() { return ace::OpParameter_NONE; }
 
-void CosineSimilarityOnnx::run(ace::OpT *dstOp, const onnx::NodeProto *onnxNode,
-                               OnnxScope *scope) {
+void CosineSimilarityOnnx::parse(
+    ace::OpT *dstOp, const onnx::NodeProto *onnxNode,
+    std::vector<const onnx::TensorProto *> initializers) {
   std::string type;
   for (int i = 0; i < onnxNode->attribute_size(); ++i) {
     auto att = onnxNode->attribute(i);
@@ -30,7 +26,7 @@ void CosineSimilarityOnnx::run(ace::OpT *dstOp, const onnx::NodeProto *onnxNode,
   return;
 }
 
-REGISTER_CONVERTER(CosineSimilarityOnnx, ATen);
+REGISTER_ONNX_NODE_PARSER(CosineSimilarityOnnx, ATen);
 
-}  // namespace converter
+}  // namespace parser
 }  // namespace ace

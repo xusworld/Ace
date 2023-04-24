@@ -1,24 +1,13 @@
-#include "ace/schema/ace_generated.h"
-#include "src/onnx/onnx_op_converter.h"
-#include "src/onnx/onnx_op_converter_register.h"
-#include "src/onnx/onnx_scope.h"
+
+#include "../onnx_node_parser_manager.h"
 
 namespace ace {
-namespace converter {
+namespace parser {
 
-DECLARE_OP_CONVERTER(ArgMaxOnnx);
-DECLARE_OP_CONVERTER(ArgMinOnnx);
+DECLARE_ONNX_NODE_PARSER(ArgMaxOnnx);
 
-ace::OpType ArgMaxOnnx::opType() { return ace::OpType_ArgMax; }
-
-ace::OpParameter ArgMaxOnnx::type() { return ace::OpParameter_ArgMax; }
-
-ace::OpType ArgMinOnnx::opType() { return ace::OpType_ArgMin; }
-
-ace::OpParameter ArgMinOnnx::type() { return ace::OpParameter_ArgMax; }
-
-static void _run(ace::OpT *dstOp, const onnx::NodeProto *onnxNode,
-                 OnnxScope *scope) {
+void ArgMaxOnnx::parse(ace::OpT *dstOp, const onnx::NodeProto *onnxNode,
+                       std::vector<const onnx::TensorProto *> initializers) {
   auto axisT = new ace::ArgMaxT;
   int axis = 0;
   int keepdims = 1;
@@ -35,45 +24,25 @@ static void _run(ace::OpT *dstOp, const onnx::NodeProto *onnxNode,
       keepdims = attributeProto.i();
     }
     if (attributeName == "select_last_index") {
-      // Ignored for now. ace argmax implementation does not support this yet.
+      // Ignored for now. argmax implementation does not support this yet.
       selectLastIndex = attributeProto.i();
     }
+  }
+  if (keepdims == 1) {
+    LOG(FATAL)
+        << "ONNX ArgMax with keepdims == true is currently not supported.";
   }
   axisT->axis = axis;
   axisT->topK = 1;
   axisT->outMaxVal = 0;
-  if (keepdims == 1) {
-    std::unique_ptr<ace::OpT> op(new ace::OpT);
-    op->name = dstOp->name + "/not_keepdim";
-    op->type = dstOp->type;
-    op->main.type = dstOp->main.type;
-    op->main.value = axisT;
-    op->inputIndexes = dstOp->inputIndexes;
-    std::vector<int> midIndexs(1, scope->declareTensor(op->name));
-    op->outputIndexes = dstOp->inputIndexes = midIndexs;
-    dstOp->type = ace::OpType_Unsqueeze;
-    auto param = new ace::SqueezeParamT;
-    param->squeezeDims.assign({axis});
-    dstOp->main.type = ace::OpParameter_SqueezeParam;
-    dstOp->main.value = param;
-    scope->oplists().emplace_back(std::move(op));
-    return;
-  }
   dstOp->main.value = axisT;
 }
 
-void ArgMaxOnnx::run(ace::OpT *dstOp, const onnx::NodeProto *onnxNode,
-                     OnnxScope *scope) {
-  _run(dstOp, onnxNode, scope);
-}
+ace::OpType ArgMaxOnnx::opType() { return ace::OpType_ArgMax; }
 
-void ArgMinOnnx::run(ace::OpT *dstOp, const onnx::NodeProto *onnxNode,
-                     OnnxScope *scope) {
-  _run(dstOp, onnxNode, scope);
-}
+ace::OpParameter ArgMaxOnnx::type() { return ace::OpParameter_ArgMax; }
 
-REGISTER_CONVERTER(ArgMaxOnnx, ArgMax);
-REGISTER_CONVERTER(ArgMinOnnx, ArgMin);
+REGISTER_ONNX_NODE_PARSER(ArgMaxOnnx, ArgMax);
 
-}  // namespace converter
+}  // namespace parser
 }  // namespace ace

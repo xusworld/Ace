@@ -5,16 +5,26 @@
 #include <google/protobuf/message.h>
 #include <google/protobuf/text_format.h>
 
+#include "ace_generated.h"
+#include "onnx.pb.h"
+
 namespace ace {
-namespace converter {
+namespace parser {
 
 bool OnnxReadProtoFromBinary(const char* filepath,
+                             google::protobuf::Message* message);
+
+bool OnnxReadProtoFromBinary(const std::string& filepath,
                              google::protobuf::Message* message);
 
 bool OnnxWriteProtoFromBinary(const char* filepath,
                               const google::protobuf::Message* message);
 
-int32_t _limit(int64_t i64);
+bool OnnxWriteProtoFromBinary(const std::string& filepath,
+                              const google::protobuf::Message* message);
 
-}  // namespace converter
+ace::DataType ToAceDataType(const onnx::TensorProto_DataType dtype);
+
+ace::BlobT* OnnxTensorToBlob(const onnx::TensorProto* constantTp);
+}  // namespace parser
 }  // namespace ace

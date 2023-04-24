@@ -1,21 +1,16 @@
-#include <glog/logging.h>
-
-#include "ace/schema/ace_generated.h"
-#include "src/onnx/onnx_op_converter.h"
-#include "src/onnx/onnx_op_converter_register.h"
-#include "src/onnx/onnx_scope.h"
+#include "../onnx_node_parser_manager.h"
 
 namespace ace {
-namespace converter {
+namespace parser {
 
-DECLARE_OP_CONVERTER(LRNOnnx);
+DECLARE_ONNX_NODE_PARSER(LRNOnnx);
 
 ace::OpType LRNOnnx::opType() { return ace::OpType_LRN; }
 
 ace::OpParameter LRNOnnx::type() { return ace::OpParameter_LRN; }
 
-void LRNOnnx::run(ace::OpT* dstOp, const onnx::NodeProto* onnxNode,
-                  OnnxScope* scope) {
+void LRNOnnx::parse(ace::OpT* dstOp, const onnx::NodeProto* onnxNode,
+                    std::vector<const onnx::TensorProto*> initializers) {
   auto param = new ace::LRNT;
 
   int size = 0;
@@ -46,16 +41,16 @@ void LRNOnnx::run(ace::OpT* dstOp, const onnx::NodeProto* onnxNode,
       bias = attributeProto.f();
     }
   }
+  DCHECK(bias == 1.0) << "LRN bias must be 1.0";
 
   param->alpha = alpha;
   param->beta = beta;
   param->localSize = size;
   param->regionType = 0;
-  param->bias = bias;
   dstOp->main.value = param;
 }
 
-REGISTER_CONVERTER(LRNOnnx, LRN);
+REGISTER_ONNX_NODE_PARSER(LRNOnnx, LRN);
 
-}  // namespace converter
+}  // namespace parser
 }  // namespace ace

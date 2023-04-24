@@ -1,29 +1,17 @@
-#include <glog/logging.h>
+#include <stdio.h>
+
+#include "../onnx_node_parser_manager.h"
 
 namespace ace {
+namespace parser {
 
-#include "ace/schema/ace_generated.h"
-#include "src/onnx/onnx_op_converter.h"
-#include "src/onnx/onnx_op_converter_register.h"
-#include "src/onnx/onnx_scope.h"
-namespace converter {
-
-DECLARE_OP_CONVERTER(GemmOnnx);
+DECLARE_ONNX_NODE_PARSER(GemmOnnx);
 
 ace::OpType GemmOnnx::opType() { return ace::OpType_InnerProduct; }
 ace::OpParameter GemmOnnx::type() { return ace::OpParameter_InnerProduct; }
 
-void GemmOnnx::run(ace::OpT* dstOp, const onnx::NodeProto* onnxNode,
-                   OnnxScope* scope) {
-  // get input initializers of gemm
-  std::vector<const onnx::TensorProto*> initializers;
-  for (int k = 0; k < onnxNode->input_size(); ++k) {
-    const auto& inputName = onnxNode->input(k);
-    const auto it = scope->mInitializers.find(inputName);
-    if (it != scope->mInitializers.end()) {
-      initializers.push_back(it->second);
-    }
-  }
+void GemmOnnx::parse(ace::OpT* dstOp, const onnx::NodeProto* onnxNode,
+                     std::vector<const onnx::TensorProto*> initializers) {
   const int size = initializers.size();
   DCHECK(size <= 2 && size >= 1) << "Gemm Input ERROR!";
   auto gemmParam = new ace::InnerProductT;
@@ -57,7 +45,7 @@ void GemmOnnx::run(ace::OpT* dstOp, const onnx::NodeProto* onnxNode,
     }
   }
 
-  // TODO, ace implement (alpha * A * B + beta * C), now (A * B + C)
+  // TODO, implement (alpha * A * B + beta * C), now (A * B + C)
   DCHECK(1 == alpha);
   DCHECK(1 == beta);
 
@@ -120,7 +108,7 @@ void GemmOnnx::run(ace::OpT* dstOp, const onnx::NodeProto* onnxNode,
     for (int i = 0; i < biasProto->dims_size(); ++i) {
       biasSize *= biasProto->dims(i);
     }
-    // TODO, ace support broadcast add for( + C)
+    // TODO,support broadcast add for( + C)
     DCHECK(bN == biasSize) << "Gemm Now not support for broadcast mode(+ C)";
     auto biasPtr = biasContainer.data();
     if (biasProto->float_data_size() != 0) {
@@ -145,16 +133,16 @@ void GemmOnnx::run(ace::OpT* dstOp, const onnx::NodeProto* onnxNode,
   dstOp->main.value = gemmParam;
 }
 
-// REGISTER_CONVERTER(GemmOnnx, Gemm);
+// REGISTER_ONNX_NODE_PARSER(GemmOnnx, Gemm);
 
-DECLARE_OP_CONVERTER(MatMulOnnx);
+DECLARE_ONNX_NODE_PARSER(MatMulOnnx);
 
 ace::OpType MatMulOnnx::opType() { return ace::OpType_MatMul; }
 
 ace::OpParameter MatMulOnnx::type() { return ace::OpParameter_MatMul; }
 
-void MatMulOnnx::run(ace::OpT* dstOp, const onnx::NodeProto* onnxNode,
-                     OnnxScope* scope) {
+void MatMulOnnx::parse(ace::OpT* dstOp, const onnx::NodeProto* onnxNode,
+                       std::vector<const onnx::TensorProto*> initializers) {
   CHECK(2 == onnxNode->input_size()) << "ONNX Matmul input error!";
   auto param = new ace::MatMulT;
   param->T = ace::DataType_DT_FLOAT;
@@ -162,7 +150,7 @@ void MatMulOnnx::run(ace::OpT* dstOp, const onnx::NodeProto* onnxNode,
   dstOp->main.value = param;
 }
 
-REGISTER_CONVERTER(MatMulOnnx, MatMul);
+REGISTER_ONNX_NODE_PARSER(MatMulOnnx, MatMul);
 
-}  // namespace converter
+}  // namespace parser
 }  // namespace ace

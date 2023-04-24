@@ -1,23 +1,19 @@
-#include "ace/schema/ace_generated.h"
-#include "src/onnx/onnx_op_converter.h"
-#include "src/onnx/onnx_op_converter_register.h"
-#include "src/onnx/onnx_scope.h"
+#include "../onnx_node_parser_manager.h"
 
 namespace ace {
-namespace converter {
+namespace parser {
 
-DECLARE_OP_CONVERTER(WhereOnnx);
+DECLARE_ONNX_NODE_PARSER(WhereOnnx);
 
 ace::OpType WhereOnnx::opType() { return ace::OpType_Select; }
 
 ace::OpParameter WhereOnnx::type() { return ace::OpParameter_NONE; }
 
-void WhereOnnx::run(ace::OpT *dstOp, const onnx::NodeProto *onnxNode,
-                    OnnxScope *scope) {
+void WhereOnnx::parse(ace::OpT *dstOp, const onnx::NodeProto *onnxNode,
+                      std::vector<const onnx::TensorProto *> initializers) {
   return;
 }
 
-REGISTER_CONVERTER(WhereOnnx, Where);
-
-}  // namespace converter
+REGISTER_ONNX_NODE_PARSER(WhereOnnx, Where);
+}  // namespace parser
 }  // namespace ace

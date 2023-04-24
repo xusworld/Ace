@@ -1,20 +1,19 @@
-#include "ace/schema/ace_generated.h"
-#include "src/onnx/onnx_op_converter.h"
-#include "src/onnx/onnx_op_converter_register.h"
-#include "src/onnx/onnx_scope.h"
+#include <stdio.h>
+
+#include "../onnx_node_parser_manager.h"
 
 namespace ace {
-namespace converter {
+namespace parser {
 
-DECLARE_OP_CONVERTER(SoftmaxOnnx);
+DECLARE_ONNX_NODE_PARSER(SoftmaxOnnx);
 
 ace::OpType SoftmaxOnnx::opType() { return ace::OpType_Softmax; }
 ace::OpParameter SoftmaxOnnx::type() { return ace::OpParameter_Axis; }
 
-void SoftmaxOnnx::run(ace::OpT* dstOp, const onnx::NodeProto* onnxNode,
-                      OnnxScope* scope) {
+void SoftmaxOnnx::parse(ace::OpT* dstOp, const onnx::NodeProto* onnxNode,
+                        std::vector<const onnx::TensorProto*> initializers) {
   auto axis = new ace::AxisT;
-  axis->axis = -1;
+  axis->axis = 1;
   const auto attrSize = onnxNode->attribute_size();
   for (int i = 0; i < attrSize; ++i) {
     const auto& attributeProto = onnxNode->attribute(i);
@@ -26,7 +25,6 @@ void SoftmaxOnnx::run(ace::OpT* dstOp, const onnx::NodeProto* onnxNode,
   dstOp->main.value = axis;
 }
 
-REGISTER_CONVERTER(SoftmaxOnnx, Softmax);
-
-}  // namespace converter
+REGISTER_ONNX_NODE_PARSER(SoftmaxOnnx, Softmax);
+}  // namespace parser
 }  // namespace ace

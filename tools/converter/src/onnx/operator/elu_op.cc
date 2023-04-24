@@ -1,22 +1,16 @@
-#include "ace/schema/ace_generated.h"
-#include "src/onnx/onnx_op_converter.h"
-#include "src/onnx/onnx_op_converter_register.h"
-#include "src/onnx/onnx_scope.h"
+#include "../onnx_node_parser_manager.h"
 
 namespace ace {
-namespace converter {
+namespace parser {
 
-DECLARE_OP_CONVERTER(EluOnnx);
-DECLARE_OP_CONVERTER(SEluOnnx);
+DECLARE_ONNX_NODE_PARSER(EluOnnx);
 
 ace::OpType EluOnnx::opType() { return ace::OpType_ELU; }
-ace::OpType SEluOnnx::opType() { return ace::OpType_Selu; }
 
 ace::OpParameter EluOnnx::type() { return ace::OpParameter_ELU; }
-ace::OpParameter SEluOnnx::type() { return ace::OpParameter_Selu; }
 
-void EluOnnx::run(ace::OpT *dstOp, const onnx::NodeProto *onnxNode,
-                  OnnxScope *scope) {
+void EluOnnx::parse(ace::OpT *dstOp, const onnx::NodeProto *onnxNode,
+                    std::vector<const onnx::TensorProto *> initializers) {
   auto eluParam = new ace::ELUT;
 
   float alpha = 1.0f;
@@ -32,29 +26,7 @@ void EluOnnx::run(ace::OpT *dstOp, const onnx::NodeProto *onnxNode,
 
   dstOp->main.value = eluParam;
 }
-void SEluOnnx::run(ace::OpT *dstOp, const onnx::NodeProto *onnxNode,
-                   OnnxScope *scope) {
-  auto seluParam = new ace::SeluT;
 
-  float alpha = 1.67326, gamma = 1.0507;
-  for (int i = 0; i < onnxNode->attribute_size(); ++i) {
-    const auto &attributeProto = onnxNode->attribute(i);
-    const auto &attributeName = attributeProto.name();
-    if (attributeName == "alpha") {
-      alpha = attributeProto.f();
-    } else if (attributeName == "gamma") {
-      gamma = attributeProto.f();
-    }
-  }
-
-  seluParam->alpha = alpha;
-  seluParam->scale = gamma;
-
-  dstOp->main.value = seluParam;
-}
-
-REGISTER_CONVERTER(EluOnnx, Elu);
-REGISTER_CONVERTER(SEluOnnx, Selu);
-
-}  // namespace converter
+REGISTER_ONNX_NODE_PARSER(EluOnnx, Elu);
+}  // namespace parser
 }  // namespace ace

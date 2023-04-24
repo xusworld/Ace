@@ -1,25 +1,20 @@
-#include <glog/logging.h>
+#include <stdio.h>
 
-#include "ace/schema/ace_generated.h"
-#include "src/onnx/onnx_op_converter.h"
-#include "src/onnx/onnx_op_converter_register.h"
-#include "src/onnx/onnx_scope.h"
+#include "../onnx_node_parser_manager.h"
 
 namespace ace {
-namespace converter {
+namespace parser {
 
-DECLARE_OP_CONVERTER(SplitOnnx);
+DECLARE_ONNX_NODE_PARSER(SplitOnnx);
 
 ace::OpType SplitOnnx::opType() { return ace::OpType_Slice; }
 
 ace::OpParameter SplitOnnx::type() { return ace::OpParameter_Slice; }
 
-void SplitOnnx::run(ace::OpT* dstOp, const onnx::NodeProto* onnxNode,
-                    OnnxScope* scope) {
+void SplitOnnx::parse(ace::OpT* dstOp, const onnx::NodeProto* onnxNode,
+                      std::vector<const onnx::TensorProto*> initializers) {
   auto param = new ace::SliceT;
-  // Default axis = 0:
-  // https://github.com/onnx/onnx/blob/main/docs/Operators.md#Split
-  int axis = 0;
+  int axis = 1;
   std::vector<int> slicePoints;
   const auto attrSize = onnxNode->attribute_size();
   for (int i = 0; i < attrSize; ++i) {
@@ -44,7 +39,7 @@ void SplitOnnx::run(ace::OpT* dstOp, const onnx::NodeProto* onnxNode,
   dstOp->main.value = param;
 }
 
-REGISTER_CONVERTER(SplitOnnx, Split);
+REGISTER_ONNX_NODE_PARSER(SplitOnnx, Split);
 
-}  // namespace converter
+}  // namespace parser
 }  // namespace ace

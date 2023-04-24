@@ -1,19 +1,16 @@
-#include "ace/schema/ace_generated.h"
-#include "src/onnx/onnx_op_converter.h"
-#include "src/onnx/onnx_op_converter_register.h"
-#include "src/onnx/onnx_scope.h"
+#include "../onnx_node_parser_manager.h"
 
 namespace ace {
-namespace converter {
+namespace parser {
 
-DECLARE_OP_CONVERTER(UnaryOnnx);
+DECLARE_ONNX_NODE_PARSER(UnaryOnnx);
 
 ace::OpType UnaryOnnx::opType() { return ace::OpType_UnaryOp; }
 
 ace::OpParameter UnaryOnnx::type() { return ace::OpParameter_UnaryOp; }
 
-void UnaryOnnx::run(ace::OpT *dstOp, const onnx::NodeProto *onnxNode,
-                    OnnxScope *scope) {
+void UnaryOnnx::parse(ace::OpT *dstOp, const onnx::NodeProto *onnxNode,
+                      std::vector<const onnx::TensorProto *> initializers) {
   std::unique_ptr<ace::UnaryOpT> unaryOpParam(new ace::UnaryOpT);
   unaryOpParam->T = ace::DataType_DT_FLOAT;
 
@@ -59,38 +56,38 @@ void UnaryOnnx::run(ace::OpT *dstOp, const onnx::NodeProto *onnxNode,
   dstOp->main.value = unaryOpParam.release();
 }
 
-REGISTER_CONVERTER(UnaryOnnx, Abs);
-REGISTER_CONVERTER(UnaryOnnx, Acos);
-REGISTER_CONVERTER(UnaryOnnx, Acosh);
-REGISTER_CONVERTER(UnaryOnnx, Asinh);
-REGISTER_CONVERTER(UnaryOnnx, Atan);
-REGISTER_CONVERTER(UnaryOnnx, Atanh);
-REGISTER_CONVERTER(UnaryOnnx, Asin);
-REGISTER_CONVERTER(UnaryOnnx, Ceil);
-REGISTER_CONVERTER(UnaryOnnx, Cos);
-REGISTER_CONVERTER(UnaryOnnx, Cosh);
-REGISTER_CONVERTER(UnaryOnnx, Expm1);
-REGISTER_CONVERTER(UnaryOnnx, Exp);
-REGISTER_CONVERTER(UnaryOnnx, Erf);
-REGISTER_CONVERTER(UnaryOnnx, Erfc);
-REGISTER_CONVERTER(UnaryOnnx, Erfinv);
-REGISTER_CONVERTER(UnaryOnnx, Floor);
-REGISTER_CONVERTER(UnaryOnnx, HardSwish);
-REGISTER_CONVERTER(UnaryOnnx, Log);
-REGISTER_CONVERTER(UnaryOnnx, Log1p);
-REGISTER_CONVERTER(UnaryOnnx, Gelu);
-REGISTER_CONVERTER(UnaryOnnx, Neg);
-REGISTER_CONVERTER(UnaryOnnx, Sin);
-REGISTER_CONVERTER(UnaryOnnx, Tan);
-REGISTER_CONVERTER(UnaryOnnx, Tanh);
-REGISTER_CONVERTER(UnaryOnnx, Reciprocal);
-REGISTER_CONVERTER(UnaryOnnx, Round);
-REGISTER_CONVERTER(UnaryOnnx, Sign);
-REGISTER_CONVERTER(UnaryOnnx, Sinh);
-REGISTER_CONVERTER(UnaryOnnx, Sqrt);
+REGISTER_ONNX_NODE_PARSER(UnaryOnnx, Abs);
+REGISTER_ONNX_NODE_PARSER(UnaryOnnx, Acos);
+REGISTER_ONNX_NODE_PARSER(UnaryOnnx, Acosh);
+REGISTER_ONNX_NODE_PARSER(UnaryOnnx, Asinh);
+REGISTER_ONNX_NODE_PARSER(UnaryOnnx, Atan);
+REGISTER_ONNX_NODE_PARSER(UnaryOnnx, Atanh);
+REGISTER_ONNX_NODE_PARSER(UnaryOnnx, Asin);
+REGISTER_ONNX_NODE_PARSER(UnaryOnnx, Ceil);
+REGISTER_ONNX_NODE_PARSER(UnaryOnnx, Cos);
+REGISTER_ONNX_NODE_PARSER(UnaryOnnx, Cosh);
+REGISTER_ONNX_NODE_PARSER(UnaryOnnx, Expm1);
+REGISTER_ONNX_NODE_PARSER(UnaryOnnx, Exp);
+REGISTER_ONNX_NODE_PARSER(UnaryOnnx, Erf);
+REGISTER_ONNX_NODE_PARSER(UnaryOnnx, Erfc);
+REGISTER_ONNX_NODE_PARSER(UnaryOnnx, Erfinv);
+REGISTER_ONNX_NODE_PARSER(UnaryOnnx, Floor);
+REGISTER_ONNX_NODE_PARSER(UnaryOnnx, HardSwish);
+REGISTER_ONNX_NODE_PARSER(UnaryOnnx, Log);
+REGISTER_ONNX_NODE_PARSER(UnaryOnnx, Log1p);
+REGISTER_ONNX_NODE_PARSER(UnaryOnnx, Gelu);
+REGISTER_ONNX_NODE_PARSER(UnaryOnnx, Neg);
+REGISTER_ONNX_NODE_PARSER(UnaryOnnx, Sin);
+REGISTER_ONNX_NODE_PARSER(UnaryOnnx, Tan);
+REGISTER_ONNX_NODE_PARSER(UnaryOnnx, Tanh);
+REGISTER_ONNX_NODE_PARSER(UnaryOnnx, Reciprocal);
+REGISTER_ONNX_NODE_PARSER(UnaryOnnx, Round);
+REGISTER_ONNX_NODE_PARSER(UnaryOnnx, Sign);
+REGISTER_ONNX_NODE_PARSER(UnaryOnnx, Sinh);
+REGISTER_ONNX_NODE_PARSER(UnaryOnnx, Sqrt);
 
 // For specitial error onnx
-REGISTER_CONVERTER(UnaryOnnx, ATan);
+REGISTER_ONNX_NODE_PARSER(UnaryOnnx, ATan);
 
-}  // namespace converter
+}  // namespace parser
 }  // namespace ace

@@ -1,17 +1,15 @@
-#include "ace/schema/ace_generated.h"
-#include "src/onnx/onnx_op_converter.h"
-#include "src/onnx/onnx_op_converter_register.h"
-#include "src/onnx/onnx_scope.h"
+#include "../onnx_node_parser_manager.h"
 
 namespace ace {
-namespace converter {
-DECLARE_OP_CONVERTER(CastOnnx);
+namespace parser {
+
+DECLARE_ONNX_NODE_PARSER(CastOnnx);
 
 ace::OpType CastOnnx::opType() { return ace::OpType_Cast; }
 ace::OpParameter CastOnnx::type() { return ace::OpParameter_CastParam; }
 
-void CastOnnx::run(ace::OpT *dstOp, const onnx::NodeProto *onnxNode,
-                   OnnxScope *scope) {
+void CastOnnx::parse(ace::OpT *dstOp, const onnx::NodeProto *onnxNode,
+                     std::vector<const onnx::TensorProto *> initializers) {
   std::unique_ptr<ace::CastParamT> castParam(new ace::CastParamT);
 
   // not to use srcT parameter!
@@ -27,11 +25,11 @@ void CastOnnx::run(ace::OpT *dstOp, const onnx::NodeProto *onnxNode,
     }
   }
 
-  castParam->dstT = OnnxOpConverter::convertDataType(castTo);
+  castParam->dstT = ToAceDataType(castTo);
   dstOp->main.value = castParam.release();
 }
 
-REGISTER_CONVERTER(CastOnnx, Cast);
+REGISTER_ONNX_NODE_PARSER(CastOnnx, Cast);
 
-}  // namespace converter
+}  // namespace parser
 }  // namespace ace

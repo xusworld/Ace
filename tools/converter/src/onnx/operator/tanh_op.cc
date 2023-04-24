@@ -1,24 +1,20 @@
 #include <stdio.h>
 
-#include "ace/schema/ace_generated.h"
-#include "src/onnx/onnx_op_converter.h"
-#include "src/onnx/onnx_op_converter_register.h"
-#include "src/onnx/onnx_scope.h"
+#include "../onnx_node_parser_manager.h"
 
 namespace ace {
-namespace converter {
+namespace parser {
 
-DECLARE_OP_CONVERTER(TanhOnnx);
+DECLARE_ONNX_NODE_PARSER(TanhOnnx);
 
 ace::OpType TanhOnnx::opType() { return ace::OpType_TanH; }
 ace::OpParameter TanhOnnx::type() { return ace::OpParameter_NONE; }
 
-void TanhOnnx::run(ace::OpT* dstOp, const onnx::NodeProto* onnxNode,
-                   OnnxScope* scope) {
+void TanhOnnx::parse(ace::OpT* dstOp, const onnx::NodeProto* onnxNode,
+                     std::vector<const onnx::TensorProto*> initializers) {
   dstOp->main.value = nullptr;
 }
 
-REGISTER_CONVERTER(TanhOnnx, Tanh);
-
-}  // namespace converter
+REGISTER_ONNX_NODE_PARSER(TanhOnnx, Tanh);
+}  // namespace parser
 }  // namespace ace

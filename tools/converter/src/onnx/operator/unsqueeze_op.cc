@@ -1,18 +1,17 @@
-#include "ace/schema/ace_generated.h"
-#include "src/onnx/onnx_op_converter.h"
-#include "src/onnx/onnx_op_converter_register.h"
-#include "src/onnx/onnx_scope.h"
+#include <stdio.h>
+
+#include "../onnx_node_parser_manager.h"
 
 namespace ace {
-namespace converter {
+namespace parser {
 
-DECLARE_OP_CONVERTER(UnSqueezeOnnx);
+DECLARE_ONNX_NODE_PARSER(UnSqueezeOnnx);
 
 ace::OpType UnSqueezeOnnx::opType() { return ace::OpType_Unsqueeze; }
 ace::OpParameter UnSqueezeOnnx::type() { return ace::OpParameter_SqueezeParam; }
 
-void UnSqueezeOnnx::run(ace::OpT* dstOp, const onnx::NodeProto* onnxNode,
-                        OnnxScope* scope) {
+void UnSqueezeOnnx::parse(ace::OpT* dstOp, const onnx::NodeProto* onnxNode,
+                          std::vector<const onnx::TensorProto*> initializers) {
   auto para = new ace::SqueezeParamT;
   for (int i = 0; i < onnxNode->attribute_size(); ++i) {
     const auto& attributeProto = onnxNode->attribute(i);
@@ -28,7 +27,6 @@ void UnSqueezeOnnx::run(ace::OpT* dstOp, const onnx::NodeProto* onnxNode,
   dstOp->main.value = para;
 }
 
-REGISTER_CONVERTER(UnSqueezeOnnx, Unsqueeze);
-
-}  // namespace converter
+REGISTER_ONNX_NODE_PARSER(UnSqueezeOnnx, Unsqueeze);
+}  // namespace parser
 }  // namespace ace
