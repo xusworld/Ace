@@ -1,0 +1,49 @@
+include "types.fbs";
+include "tensor.fbs";
+include "op_option.fbs";
+
+
+namespace ace;
+
+enum OpType : int {
+  Const = 0,
+  Relu = 1,
+  Relu6,
+  ClippedRelu,
+  LeakyRelu,
+  PRelu, 
+  Elu,
+  Selu, 
+  Tanh,
+  Sigmoid,
+  Pool2D,
+  Pool3D,
+  Reshape,
+  Slice,  
+  Flatten,
+  Permute,
+  ArgMax,
+  BatchNorm,
+  Conv2D,
+  Conv3D, 
+  Elementwise,
+  InnerProduct,
+  LRN,
+  Normalize,
+  PriorBox,  
+  Proposal, 
+  Resize,
+  RoiPooling, 
+  Scale,
+  Softmax, 
+  Input,
+}
+
+table Op {
+  name: string;
+  inputs: [int32]; 
+  outputs: [int32];
+  option: OpOptionType;
+  type: OpType;
+  desc: string;
+}
