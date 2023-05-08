@@ -31,7 +31,7 @@ class RemoveDropout : public RemoveTestNoUseOps {
                     op->main.AsExtra()->type) != unuseExtraOpType.end()) {
         return true;
       }
-      if (netPtr->sourceType == ace::NetSource_CAFFE &&
+      if (netPtr->sourceType == ace::FrontendFramework_CAFFE &&
           op->main.AsExtra()->type == "Split") {
         return true;
       }

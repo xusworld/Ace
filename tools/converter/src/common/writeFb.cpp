@@ -7,6 +7,7 @@
 //
 
 #include <ace/MNNDefine.h>
+#include <glog/logging.h>
 
 #include <algorithm>
 #include <fstream>
@@ -23,7 +24,6 @@
 #include "cpp/ConfigFile.hpp"
 #include "cpp/IDSTEncoder.hpp"
 #include "half.hpp"
-#include "logkit.h"
 #include "writeFb.hpp"
 
 using namespace ace;

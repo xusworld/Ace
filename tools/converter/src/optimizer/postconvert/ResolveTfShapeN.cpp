@@ -12,7 +12,7 @@
 class ResolveTfShapeN : public PostConverter {
  public:
   virtual bool onExecute(std::unique_ptr<ace::NetT>& net) const override {
-    if (net->sourceType != ace::NetSource_TENSORFLOW) {
+    if (net->sourceType != ace::FrontendFramework_TENSORFLOW) {
       return true;
     }
 

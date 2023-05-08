@@ -6,12 +6,13 @@
 //  Copyright © 2018, Alibaba Group Holding Limited
 //
 
+#include <glog/logging.h>
+
 #include <fstream>
 #include <sstream>
 #include <string>
 
 #include "calibration.hpp"
-#include "logkit.h"
 
 int main(int argc, const char* argv[]) {
   if (argc < 4) {

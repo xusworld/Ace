@@ -216,7 +216,7 @@ table LSTM {
 table Slice {
     axis:int;
     slicePoints:[int];
-    sourceType:NetSource=CAFFE;
+    sourceType:FrontendFramework=CAFFE;
 }
 
 table BatchNorm {

@@ -15,8 +15,10 @@
 namespace ace {
 namespace parser {
 
-int OnnxToAceModel(const std::string inputModel, const std::string bizCode,
+int OnnxToAceModel(const std::string& onnx_model_path,
+                   const std::string& bizCode,
                    std::unique_ptr<ace::NetT>& netT);
+
 }  // namespace parser
 }  // namespace ace
 

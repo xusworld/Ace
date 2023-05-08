@@ -6,16 +6,58 @@ include "op_option.fbs";
 namespace ace;
 
 enum OpType : int {
-  Const = 0,
-  Relu = 1,
-  Relu6,
+  Default = 0,
+  // Constant Operators
+  Const,
+  // Elementwise Operators
+  Abs,
+  BoundedRelu,
+  Clip,
+  ClipV2,
   ClippedRelu,
-  LeakyRelu,
-  PRelu, 
   Elu,
-  Selu, 
-  Tanh,
+  Exp,
+  GeluTanh,
+  HardSigmoid,
+  HardSwish,
+  LeakyRelu,
+  Linear,
+  Log,
+  Logistic,
+  LogSigmoid,
+  Mish,
+  Pow,
+  PRelu,
+  Relu,
+  Relu6,
+  Round,
+  Selu,
   Sigmoid,
+  SoftRelu,
+  SoftReluV2,
+  Sqrt,
+  Swish,
+  Tanh,
+  // Binary Operators 
+  Add,
+  Mul,
+  Min,
+  Max,
+  Mean,
+  Div,
+  GreaterEqual,
+  GreatherThan,
+  LessEqual,
+  LessThan,
+  EqualTo,
+  NotEqual,
+  // Reduction Operators 
+  ReduceMin,
+  ReduceMax,
+  ReduceMean,
+  ReduceSum,
+  ReduceMul, 
+  // Others
   Pool2D,
   Pool3D,
   Reshape,
@@ -26,7 +68,6 @@ enum OpType : int {
   BatchNorm,
   Conv2D,
   Conv3D, 
-  Elementwise,
   InnerProduct,
   LRN,
   Normalize,
@@ -43,7 +84,7 @@ table Op {
   name: string;
   inputs: [int32]; 
   outputs: [int32];
-  option: OpOptionType;
+  option: OpOption;
   type: OpType;
   desc: string;
 }

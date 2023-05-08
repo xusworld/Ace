@@ -15,12 +15,12 @@
 #include <unistd.h>
 #endif
 #include <ace/MNNDefine.h>
+#include <glog/logging.h>
 
 #include "PostConverter.hpp"
 #include "ace_generated.h"
 #include "config.hpp"
 #include "cxxopts.hpp"
-#include "logkit.h"
 #include "onnxConverter.hpp"
 #include "writeFb.hpp"
 

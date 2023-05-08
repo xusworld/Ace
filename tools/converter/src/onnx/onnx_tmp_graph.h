@@ -1,48 +1,54 @@
-#ifndef OnnxTmpGraph_hpp
-#define OnnxTmpGraph_hpp
+#pragma once
 
 #include <stdio.h>
 
 #include "onnx.pb.h"
 
-class OnnxTmpNode {
+class OnnxTmpNode final {
  public:
-  OnnxTmpNode();
-  ~OnnxTmpNode();
-  std::string opName;
-  std::string opType;
-  const onnx::NodeProto* onnxNode;
+  OnnxTmpNode() = default;
+  ~OnnxTmpNode() = default;
 
-  std::vector<std::string> inEdges;
-  std::vector<std::string> outEdges;
+  const onnx::NodeProto* node;
+  std::string op_name;
+  std::string op_type;
+
+  std::set<std::string> in_edges;
+  std::set<std::string> out_edges;
 };
 
-class OnnxTmpGraph {
+class OnnxTmpGraph final {
  public:
   OnnxTmpGraph(const onnx::GraphProto* onnxGraph);
   OnnxTmpGraph() = delete;
-  ~OnnxTmpGraph();
+  ~OnnxTmpGraph() = default;
 
   int buildGraph();
-  std::shared_ptr<OnnxTmpNode> _getTmpNode(const std::string& nodeName);
-
-  const onnx::GraphProto* mOnnxGraph;
-  std::map<std::string, std::shared_ptr<OnnxTmpNode>> mTempNodes;
-  std::map<std::string, const onnx::TensorProto*> mInitializers;
-  std::map<std::string, const onnx::ValueInfoProto*> mInputs;
-  std::map<std::string, const onnx::ValueInfoProto*> mOutputs;
-  std::set<std::string> mConstantNodeToDelete;
+  std::shared_ptr<OnnxTmpNode> getTmpNode(const std::string& nodeName);
+  std::map<std::string, const onnx::TensorProto*> GetModelInitializers();
+  std::map<std::string, const onnx::ValueInfoProto*> GetModelInputs();
+  std::map<std::string, const onnx::ValueInfoProto*> GetModelOutputs();
+  std::set<std::string> GetNodesType();
+  const onnx::GraphProto* GetOnnxGraph() { return graph_; };
 
  private:
-  void _init();
-  void _genMinGraph();
-  int _pushNoReaptedItem(std::vector<std::string>& tensorNames,
-                         const std::string& item);
-  int _makeConnection(const std::shared_ptr<OnnxTmpNode>& srcNode,
-                      const std::shared_ptr<OnnxTmpNode>& dstNode,
-                      const std::string& srcName, const std::string& dstName);
-  void _changInOutName(std::vector<std::string>& inOutEdges,
-                       const std::string& name, const std::string& deleteName);
-};
+  void init();
+  void genMinGraph();
+  int makeConnection(const std::shared_ptr<OnnxTmpNode>& srcNode,
+                     const std::shared_ptr<OnnxTmpNode>& dstNode,
+                     const std::string& srcName, const std::string& dstName);
 
-#endif /* OnnxTmpGraph_hpp */
+  const onnx::GraphProto* graph_;
+  // The nodes in the graph, sorted topologically.
+  std::map<std::string, std::shared_ptr<OnnxTmpNode>> nodes_;
+  //  The name of the graph.
+  std::string name_;
+  // A list of named tensor values, used to specify constant inputs of the
+  // graph.Each TensorProto entry must have a distinct name (within the list)
+  // that MAY also appear in the input list.
+  std::map<std::string, const onnx::TensorProto*> initializers_;
+  // The inputs and outputs of the graph.
+  std::map<std::string, const onnx::ValueInfoProto*> inputs_;
+  std::map<std::string, const onnx::ValueInfoProto*> outputs_;
+  std::set<std::string> nodes_type_;
+};

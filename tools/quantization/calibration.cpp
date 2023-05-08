@@ -6,6 +6,8 @@
 //  Copyright © 2018, Alibaba Group Holding Limited
 //
 
+#include <glog/logging.h>
+
 #include <ace/ImageProcess.hpp>
 #include <algorithm>
 #include <cmath>
@@ -17,7 +19,6 @@
 
 #include "calibration.hpp"
 #include "flatbuffers/util.h"
-#include "logkit.h"
 #include "quantizeWeight.hpp"
 #include "rapidjson/document.h"
 #include "rapidjson/prettywriter.h"

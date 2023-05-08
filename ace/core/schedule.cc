@@ -35,6 +35,7 @@ DeviceType Schedule::getApprociateType(const ScheduleConfig& config) {
   return type;
 }
 
+// 关键函数，设置 tensor 信息
 static bool _setUpTensorInfo(std::vector<std::shared_ptr<Tensor>>& allTensors,
                              const Net* net) {
   bool valid = true;
@@ -42,6 +43,7 @@ static bool _setUpTensorInfo(std::vector<std::shared_ptr<Tensor>>& allTensors,
   tensors.resize(net->tensorName()->size());
 
   if (net->usage() == Usage_INFERENCE_STATIC) {
+    LOG(INFO) << "Set inference static";
     // static model will set all tensors' shape
     auto describes = net->extraTensorDescribe();
     std::vector<const TensorDescribe*> des(tensors.size());
@@ -96,6 +98,7 @@ static bool _setUpTensorInfo(std::vector<std::shared_ptr<Tensor>>& allTensors,
       }
     }
   } else {
+    LOG(INFO) << "Cool Dynamic model";
     // Dynamic Model just set input tensor's shape
     valid = initTensors(tensors, net);
   }
@@ -237,15 +240,14 @@ static vector<Schedule::PipelineInfo> _scheduleUnit(
 Schedule::ScheduleInfo Schedule::schedule(
     const Net* net, const std::vector<ScheduleConfig>& configs) {
   std::vector<std::shared_ptr<Tensor>> allTensors;
-
   // 调度信息
   ScheduleInfo schedule;
-  // 判断网络是否正常
+  // 判断计算图 op 列表是否为空
   if (nullptr == net->oplists()) {
     MNN_PRINT("Error net for schedule\n");
     return schedule;
   }
-  // 设置 tensor 信息
+  // 设置 tensor 信息，返回是否需 resize 的信息
   bool valid = _setUpTensorInfo(allTensors, net);
   schedule.validForResize = valid;
 

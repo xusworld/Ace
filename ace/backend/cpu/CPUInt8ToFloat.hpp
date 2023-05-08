@@ -9,7 +9,7 @@
 #ifndef CPUInt8ToFloat_hpp
 #define CPUInt8ToFloat_hpp
 
-#include <ace/Tensor.hpp>
+#include <ace/tensor.h>
 
 #include "core/Execution.hpp"
 

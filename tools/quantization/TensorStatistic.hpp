@@ -6,7 +6,8 @@
 //  Copyright © 2018, Alibaba Group Holding Limited
 //
 
-#include <ace/Tensor.hpp>
+#include <ace/tensor.h>
+
 #include <memory>
 #include <string>
 #include <vector>

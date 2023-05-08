@@ -9,8 +9,9 @@
 #ifndef Interpreter_hpp
 #define Interpreter_hpp
 
+#include <ace/tensor.h>
+
 #include <ace/ErrorCode.hpp>
-#include <ace/Tensor.hpp>
 #include <functional>
 #include <map>
 #include <memory>

@@ -24,7 +24,7 @@ struct OptimizeContext {
   std::vector<ace::SubGraphProtoT*> subgraphs;
   bool is_training;
   bool verbose;
-  NetSource source;
+  FrontendFramework source;
 
   std::vector<SubGraphProtoT*> completed_subgraphs;
 

@@ -16,7 +16,7 @@ namespace passes {
 typedef struct PassContext {
   bool is_training = false;
   bool verbose = true;
-  NetSource source = NetSource_TENSORFLOW;
+  FrontendFramework source = FrontendFramework_TENSORFLOW;
   //
   Express::EXPRP node;
 } PassContext;

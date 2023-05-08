@@ -564,7 +564,7 @@ std::vector<VARP> _Split(VARP value, INTS size_splits, int axis) {
   op->main.type = OpParameter_Slice;
   op->main.value = new SliceT;
   op->main.AsSlice()->axis = axis;
-  op->main.AsSlice()->sourceType = NetSource_TENSORFLOW;
+  op->main.AsSlice()->sourceType = FrontendFramework_TENSORFLOW;
   op->main.AsSlice()->slicePoints = size_splits;
 
   int slices =

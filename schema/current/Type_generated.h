@@ -8,43 +8,43 @@
 
 namespace ace {
 
-enum NetSource {
-  NetSource_CAFFE = 0,
-  NetSource_TENSORFLOW = 1,
-  NetSource_TFLITE = 2,
-  NetSource_ONNX = 3,
-  NetSource_TORCH = 4,
-  NetSource_MIN = NetSource_CAFFE,
-  NetSource_MAX = NetSource_TORCH
+enum FrontendFramework {
+  FrontendFramework_ONNX = 0,
+  FrontendFramework_CAFFE = 1,
+  FrontendFramework_TENSORFLOW = 2,
+  FrontendFramework_TFLITE = 3,
+  FrontendFramework_TORCH = 4,
+  FrontendFramework_MIN = FrontendFramework_ONNX,
+  FrontendFramework_MAX = FrontendFramework_TORCH
 };
 
-inline const NetSource (&EnumValuesNetSource())[5] {
-  static const NetSource values[] = {
-    NetSource_CAFFE,
-    NetSource_TENSORFLOW,
-    NetSource_TFLITE,
-    NetSource_ONNX,
-    NetSource_TORCH
+inline const FrontendFramework (&EnumValuesFrontendFramework())[5] {
+  static const FrontendFramework values[] = {
+    FrontendFramework_ONNX,
+    FrontendFramework_CAFFE,
+    FrontendFramework_TENSORFLOW,
+    FrontendFramework_TFLITE,
+    FrontendFramework_TORCH
   };
   return values;
 }
 
-inline const char * const *EnumNamesNetSource() {
+inline const char * const *EnumNamesFrontendFramework() {
   static const char * const names[] = {
+    "ONNX",
     "CAFFE",
     "TENSORFLOW",
     "TFLITE",
-    "ONNX",
     "TORCH",
     nullptr
   };
   return names;
 }
 
-inline const char *EnumNameNetSource(NetSource e) {
-  if (e < NetSource_CAFFE || e > NetSource_TORCH) return "";
+inline const char *EnumNameFrontendFramework(FrontendFramework e) {
+  if (e < FrontendFramework_ONNX || e > FrontendFramework_TORCH) return "";
   const size_t index = static_cast<int>(e);
-  return EnumNamesNetSource()[index];
+  return EnumNamesFrontendFramework()[index];
 }
 
 enum DataType {
@@ -137,7 +137,7 @@ inline const char *EnumNameDataType(DataType e) {
   return EnumNamesDataType()[index];
 }
 
-inline const flatbuffers::TypeTable *NetSourceTypeTable() {
+inline const flatbuffers::TypeTable *FrontendFrameworkTypeTable() {
   static const flatbuffers::TypeCode type_codes[] = {
     { flatbuffers::ET_CHAR, 0, 0 },
     { flatbuffers::ET_CHAR, 0, 0 },
@@ -146,13 +146,13 @@ inline const flatbuffers::TypeTable *NetSourceTypeTable() {
     { flatbuffers::ET_CHAR, 0, 0 }
   };
   static const flatbuffers::TypeFunction type_refs[] = {
-    NetSourceTypeTable
+    FrontendFrameworkTypeTable
   };
   static const char * const names[] = {
+    "ONNX",
     "CAFFE",
     "TENSORFLOW",
     "TFLITE",
-    "ONNX",
     "TORCH"
   };
   static const flatbuffers::TypeTable tt = {

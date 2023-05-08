@@ -27,7 +27,7 @@ class SliceComputer : public SizeComputer {
       axis += input.dimensions;
     }
 
-    if (ace::NetSource_CAFFE == slice->sourceType()) {
+    if (ace::FrontendFramework_CAFFE == slice->sourceType()) {
       // caffe Slice
       int previous = 0;
       for (int i = 0; i < slice->slicePoints()->size(); ++i) {

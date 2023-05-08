@@ -120,13 +120,13 @@ class AddTensorFormatConverter : public PostConverter {
  public:
   virtual bool onExecute(std::unique_ptr<ace::NetT>& net) const override {
     auto& mNet = net;
-    if (mNet->sourceType == ace::NetSource_CAFFE) {
+    if (mNet->sourceType == ace::FrontendFramework_CAFFE) {
       return true;
     }
 
     auto originTensorType = ace::DATA_FORMAT_NHWC;
-    if (mNet->sourceType == ace::NetSource_ONNX ||
-        mNet->sourceType == ace::NetSource_TORCH) {
+    if (mNet->sourceType == ace::FrontendFramework_ONNX ||
+        mNet->sourceType == ace::FrontendFramework_TORCH) {
       originTensorType = ace::DATA_FORMAT_NCHW;
     }
     auto config = Global<modelConfig>::Get();
@@ -315,8 +315,8 @@ class AddTensorFormatConverter : public PostConverter {
       iter++;
     }
 
-    if (mNet->sourceType == ace::NetSource_ONNX ||
-        mNet->sourceType == ace::NetSource_TORCH) {
+    if (mNet->sourceType == ace::FrontendFramework_ONNX ||
+        mNet->sourceType == ace::FrontendFramework_TORCH) {
       return true;
     }
 

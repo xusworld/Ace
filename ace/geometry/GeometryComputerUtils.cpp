@@ -365,6 +365,7 @@ Command GeometryComputerUtils::makeReduce(ReductionType type, Tensor* input0,
   cmd.op = flatbuffers::GetMutableRoot<Op>(cmd.buffer.data());
   return cmd;
 }
+
 Command GeometryComputerUtils::makeUnary(UnaryOpOperation type, Tensor* input0,
                                          Tensor* output) {
   flatbuffers::FlatBufferBuilder builder;
@@ -384,6 +385,7 @@ Command GeometryComputerUtils::makeUnary(UnaryOpOperation type, Tensor* input0,
   cmd.op = flatbuffers::GetMutableRoot<Op>(cmd.buffer.data());
   return cmd;
 }
+
 Command GeometryComputerUtils::makeCommand(
     flatbuffers::FlatBufferBuilder& builder, const std::vector<Tensor*>& inputs,
     const std::vector<Tensor*>& outputs) {

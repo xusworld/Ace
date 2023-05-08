@@ -95,9 +95,12 @@ const std::map<const Op*, std::shared_ptr<Execution>>& Session::getExecution(
 
 ErrorCode Session::run() const {
   if (mNeedResize) {
-    MNN_ERROR("Can't run session because not resized\n");
+    LOG(FATAL) << "Can't run session because not resized";
     return COMPUTE_SIZE_ERROR;
   }
+
+  // LOG(INFO) << "mPipelines.size(): " << mPipelines.size();
+
   for (auto& iter : mPipelines) {
     auto error = iter->execute();
     if (NO_ERROR != error) {

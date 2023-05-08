@@ -9,7 +9,8 @@
 #ifndef SizeComputer_hpp
 #define SizeComputer_hpp
 
-#include <ace/Tensor.hpp>
+#include <ace/tensor.h>
+
 #include <map>
 #include <string>
 #include <vector>

@@ -10,9 +10,9 @@
 #define ImageProcess_hpp
 
 #include <ace/Matrix.h>
+#include <ace/tensor.h>
 
 #include <ace/ErrorCode.hpp>
-#include <ace/Tensor.hpp>
 
 namespace ace {
 namespace CV {

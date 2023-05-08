@@ -15,11 +15,15 @@ class GeometryBinary : public GeometryComputer {
   virtual bool onCompute(const Op* op, const std::vector<Tensor*>& inputs,
                          const std::vector<Tensor*>& outputs, Context& context,
                          CommandBuffer& res) const override {
+    // Binary op with two inputs
     auto input0 = inputs[0];
     auto input1 = inputs[1];
+    // Binary op with one output
     auto output = outputs[0];
+
     auto inputL0 = input0->elementSize();
     auto inputL1 = input1->elementSize();
+
     auto outputSize = output->elementSize();
     auto inp0format = TensorUtils::getDescribe(inputs[0])->dimensionFormat;
     auto inp1format = TensorUtils::getDescribe(inputs[1])->dimensionFormat;

@@ -17,10 +17,10 @@ table SubGraphProto {
   name: string;
 
   // The ids of input tensors.
-  inputs: [int];
+  inputs: [int32];
 
   // The ids of output tensors.
-  outputs: [int];
+  outputs: [int32];
 
   // All tensor names.
   // The id of each tensor is the index in the vector names.

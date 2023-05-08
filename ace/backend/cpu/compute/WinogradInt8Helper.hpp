@@ -12,7 +12,7 @@
 #include <cstddef>
 #include <cstdint>
 
-#include "ace/Tensor.hpp"
+#include "ace/tensor.h"
 #include "core/ConvolutionCommon.hpp"
 
 namespace ace {

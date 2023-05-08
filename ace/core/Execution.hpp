@@ -9,8 +9,9 @@
 #ifndef Execution_hpp
 #define Execution_hpp
 
+#include <ace/tensor.h>
+
 #include <ace/ErrorCode.hpp>
-#include <ace/Tensor.hpp>
 #include <memory>
 #include <string>
 

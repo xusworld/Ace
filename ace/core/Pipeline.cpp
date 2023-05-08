@@ -57,6 +57,7 @@ static bool _needRelease(const Tensor* tensor, bool inputOutside) {
   }
   return true;
 }
+
 static void _releaseTensor(Tensor* origin, bool mAllocInput) {
   TensorUtils::getDescribe(origin)->useCount -= 1;
   if (0 == TensorUtils::getDescribe(origin)->useCount &&

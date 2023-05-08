@@ -9,6 +9,7 @@
 #ifndef POSTTREATUTILS_HPP
 #define POSTTREATUTILS_HPP
 
+#include <glog/logging.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -19,7 +20,6 @@
 #include <sstream>
 
 #include "ace_generated.h"
-#include "logkit.h"
 class PostConverter {
  public:
   PostConverter() = default;

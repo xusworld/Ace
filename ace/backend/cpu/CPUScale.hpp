@@ -9,7 +9,7 @@
 #ifndef CPUScale_hpp
 #define CPUScale_hpp
 
-#include <ace/Tensor.hpp>
+#include <ace/tensor.h>
 
 #include "core/Execution.hpp"
 

@@ -26,11 +26,11 @@
 #include <sys/time.h>
 #endif
 #include <ace/MNNDefine.h>
+#include <ace/tensor.h>
 #include <ace_generated.h>
 
 #include <ace/AutoTime.hpp>
 #include <ace/Interpreter.hpp>
-#include <ace/Tensor.hpp>
 #include <core/Backend.hpp>
 #include <core/TensorUtils.hpp>
 

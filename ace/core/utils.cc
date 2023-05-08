@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#include <iostream>
 #include <unordered_map>
 
 #include "core/Macro.h"
@@ -60,6 +61,7 @@ extern "C" void MNNMemoryFreeAlign(void* aligned) {
 
 namespace ace {
 
+// 初始化所有 tensors
 bool initTensors(std::vector<std::shared_ptr<Tensor>>& tensors,
                  const Net* net) {
   auto describes = net->extraTensorDescribe();
@@ -70,6 +72,7 @@ bool initTensors(std::vector<std::shared_ptr<Tensor>>& tensors,
       des[index] = describes->GetAs<TensorDescribe>(i);
     }
   }
+
   bool valid = true;
   for (int i = 0; i < tensors.size(); ++i) {
     tensors[i].reset(new Tensor(4));  // NCHW, TODO
@@ -84,28 +87,37 @@ bool initTensors(std::vector<std::shared_ptr<Tensor>>& tensors,
       quant->max = des[i]->quantInfo()->max();
     }
   }
+
   // Set Input Tensor, if the type of input is not the same with
   // ExtraTensorDescribe, use input parameter
   for (int opIndex = 0; opIndex < net->oplists()->size(); ++opIndex) {
     auto op = net->oplists()->GetAs<Op>(opIndex);
+
     if (OpType_Input == op->type()) {
-      MNN_ASSERT(nullptr != op->outputIndexes());
-      MNN_ASSERT(op->outputIndexes()->size() == 1);
+      CHECK(nullptr != op->outputIndexes());
+      CHECK(op->outputIndexes()->size() == 1);
+
+      LOG(INFO) << "name : " << op->name()->str();
+      LOG(INFO) << "op output indexes : " << op->outputIndexes()->size();
+      if (opIndex == 4) {
+        exit(0);
+      }
       auto index = op->outputIndexes()->data()[0];
+
       auto tensor = tensors[index].get();
       auto& tb = tensor->buffer();
       auto inputParam = op->main_as_Input();
+
+      LOG(INFO) << "inputParam->dims(): " << inputParam->dims();
       if (auto idims = inputParam->dims()) {
         for (int i = 0; i < idims->size(); ++i) {
           int extent = idims->data()[i];
           // dim-0 is batch(when input batch is -1, set it to be 1, ignore other
           // dim)
-          if (i == 0 && extent == -1) {
-            extent = 1;
-          }
-          if (extent < 0) {
-            valid = false;
-          }
+          if (i == 0 && extent == -1) extent = 1;
+
+          if (extent < 0) valid = false;
+
           tb.dim[i].extent = extent;
         }
         tb.dimensions = idims->size();
@@ -118,6 +130,7 @@ bool initTensors(std::vector<std::shared_ptr<Tensor>>& tensors,
   }
   return valid;
 }
+
 void initPipelineInfosFromOps(
     std::vector<Schedule::PipelineInfo>& infos, std::vector<const Op*>& ops,
     const std::vector<std::shared_ptr<Tensor>>& allTensors) {
@@ -128,12 +141,15 @@ void initPipelineInfosFromOps(
     // 遍历所有Ops，保存每一个 op 的输入输出
     opInfo.op = op;
     if (nullptr != op->outputIndexes()) {
+      LOG(INFO) << "op->outputIndexes()->size(): "
+                << op->outputIndexes()->size();
       auto data = op->outputIndexes()->data();
       for (int j = 0; j < op->outputIndexes()->size(); ++j) {
         opInfo.outputs.push_back(allTensors[data[j]].get());
       }
     }
     if (nullptr != op->inputIndexes()) {
+      LOG(INFO) << "op->inputIndexes()->size(): " << op->inputIndexes()->size();
       auto data = op->inputIndexes()->data();
       for (int j = 0; j < op->inputIndexes()->size(); ++j) {
         opInfo.inputs.push_back(allTensors[data[j]].get());
@@ -145,6 +161,7 @@ void initPipelineInfosFromOps(
   }
 }
 
+// 设置输出输出
 void setInputOutputForOps(std::vector<std::shared_ptr<Tensor>>& allTensors,
                           const std::vector<const Op*>& ops, bool isStatic) {
   LOG(INFO) << "setInputOutputForOps: isStatic = " << isStatic;
@@ -173,6 +190,7 @@ void setInputOutputForOps(std::vector<std::shared_ptr<Tensor>>& allTensors,
       }
     }
   }
+
   // 1. insert all output/input index in outputIndexes/inputIndexes
   for (auto op : ops) {
     if (nullptr != op->outputIndexes()) {
@@ -182,17 +200,19 @@ void setInputOutputForOps(std::vector<std::shared_ptr<Tensor>>& allTensors,
       }
     }
 
-    // LOG(INFO) << "outputIndexes.size(): " << outputIndexes.size();
-
     if (nullptr != op->inputIndexes()) {
       auto data = op->inputIndexes()->data();
       for (int j = 0; j < op->inputIndexes()->size(); ++j) {
         inputIndexes.insert(data[j]);
       }
     }
-    // LOG(INFO) << "inputIndexes.size(): " << inputIndexes.size();
+
     MNN_ASSERT(OpType_Input != op->type());
   }
+
+  LOG(INFO) << "outputIndexes.size(): " << outputIndexes.size();
+  LOG(INFO) << "inputIndexes.size(): " << inputIndexes.size();
+
   // 2. the index in outputIndexes/inputIndexed but not in
   // inputIndexes/outputIndexes is output/input
   std::set<int> input;
@@ -203,6 +223,13 @@ void setInputOutputForOps(std::vector<std::shared_ptr<Tensor>>& allTensors,
   std::set_difference(inputIndexes.begin(), inputIndexes.end(),
                       outputIndexes.begin(), outputIndexes.end(),
                       std::inserter(input, input.begin()));
+
+  for (auto item : input) {
+    LOG(INFO) << "input: " << item;
+  }
+  for (auto item : output) {
+    LOG(INFO) << "output: " << item;
+  }
 
   // 3. set usage for Tensor by index
   for (auto index : input) {

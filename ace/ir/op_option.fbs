@@ -5,23 +5,66 @@ namespace ace;
 
 // Operators List
 //
-// 1. Activation Operators
-// - Relu/Relu6/ClipedRelu/LeakyRelu/PRelu
-// - ELU/SELU 
-// - Tanh
+// 1. Elementwise Operators
+// - Abs
+// - BoundedRelu
+// - Clip 
+// - ClipV2
+// - Elu
+// - Exp
+// - GeluTanh
+// - HardSigmoid
+// - HardSwish
+// - Linear
+// - Log
+// - Logistic
+// - LogSigmoid
+// - Mish
+// - Pow
+// - PRelu
+// - Relu
+// - Relu6
+// - ClipedRelu
+// - LeakyRelu
+// - Round
+// - Selu
 // - Sigmoid
+// - SoftRelu
+// - SoftReluV2
+// - Sqrt
+// - Swish
+// - Tanh
 //
-// 2. Pool
+// 2. Binary Opeartors
+// - Add
+// - Mul
+// - Max
+// - Mean
+// - Div
+// - GE
+// - GT
+// - LE
+// - LT
+// - EQ
+// - NE
+//
+// 3. Reduction Operators
+// - ReduceMin
+// - ReduceMax
+// - ReduceMean
+// - ReduceSum
+// - ReduceMul
+// 
+// 4. Pool
 // - Pool2D
 // - Pool3D
 // 
-// 3. Reshape/Slice/Permute/Flatten
+// 3. Reshape/Slice/Permute/Flatten Operators
 //
 // 4. Others
 // - ArgMax
 // - BatchNorm
 // - Conv2D/Conv3D
-// - Elementwise
 // - InnerProduct
 // - LRN
 // - Normalize
@@ -31,8 +74,66 @@ namespace ace;
 // - RoiPooling
 // - Scale
 // - Softmax
-table ConstOption {
-  tensor:Tensor;
+
+table AbsOption {
+
+}
+
+table BoundedReluOption {
+
+}
+
+table ClipOption {
+
+}
+
+table ClipV2Option {
+
+}
+
+table EluOption {
+  alpha: float32 = 1.0;
+}
+
+table ExpOption {
+
+}
+
+table GeluTanhOption {
+
+}
+
+table HardSigmoidOption {
+
+}
+
+table HardSwishOption {
+
+}
+
+table LinearOption {
+
+}
+
+table LogOption {
+
+}
+
+table LogisticOption {
+
+}
+
+table MishOption {
+
+}
+
+table PowOption {
+
+}
+
+table PReluOption {
+  slopeCount:int;
+  slope:[float];
 }
 
 table ReluOption {
@@ -52,13 +153,12 @@ table LeakyReluOption {
   negative_slope:float = 0.01;
 }
 
-table PReluOption {
-  slopeCount:int;
-  slope:[float];
+table LogSigmoidOption {
+
 }
 
-table EluOption {
-  alpha: float32 = 1.0;
+table RoundOption {
+
 }
 
 table SeluOption {
@@ -66,27 +166,179 @@ table SeluOption {
   alpha:float = 1.673263;
 }
 
-table TanhOption {
-}
-
 table SigmoidOption {
 }
 
-table NoneActivationOption {
+table SoftReluOption {
+
+} 
+
+
+table SoftReluV2Option {
+
+} 
+
+
+table SqrtOption {
+
+} 
+
+
+table SwishOption {
+
+} 
+
+
+table TanhOption {
 }
 
-union ActivationType {
-  NoneActivationOption,
+
+table ConstOption {
+  tensor:Tensor;
+}
+
+
+
+table NoneElementwiseOption {
+}
+
+union ElementwiseType {
+  AbsOption,
+  BoundedReluOption,
+  ClipOption,
+  ClipV2Option,
+  ClippedReluOption,
+  EluOption,
+  ExpOption,
+  GeluTanhOption,
+  HardSigmoidOption,
+  HardSwishOption,
+  LeakyReluOption,
+  LinearOption,
+  LogOption,
+  LogisticOption,
+  LogSigmoidOption,
+  MishOption,
+  PowOption,
+  PReluOption,
   ReluOption,
   Relu6Option,
-  ClippedReluOption,
-  LeakyReluOption,
-  PReluOption,
-  EluOption,
-  SeluOption, 
-  TanhOption,
+  RoundOption,
+  SeluOption,
   SigmoidOption,
+  SoftReluOption,
+  SoftReluV2Option,
+  SqrtOption,
+  SwishOption,
+  TanhOption,
+  NoneElementwiseOption,
 }
+
+// - Add
+// - Mul
+// - Min
+// - Max
+// - Mean
+// - Div
+// - GreaterEqual
+// - GreatherThan
+// - LessEqual
+// - LessThan
+// - EqualTo
+// - NotEqual
+
+table AddOption {
+
+}
+
+table MulOption {
+
+}
+
+table MinOption {
+
+}
+
+table MaxOption {
+
+}
+
+table MeanOption {
+
+}
+
+table DivOption {
+
+}
+
+table GreaterEqualOption {
+
+}
+
+table GreatherThanOption {
+
+}
+
+table LessEqualOption {
+
+}
+
+table LessThanOption {
+
+}
+
+table EqualToOption {
+
+}
+
+table NotEqualOption {
+
+}
+
+union BinaryType {
+  AddOption,
+  MulOption,
+  MinOption,
+  MaxOption,
+  MeanOption,
+  DivOption,
+  GreaterEqualOption,
+  GreatherThanOption,
+  LessEqualOption,
+  LessThanOption,
+  EqualToOption,
+  NotEqualOption,
+}
+
+
+table ReduceMinOption {
+
+}
+
+table ReduceMaxOption {
+  
+}
+
+table ReduceMeanOption {
+  
+}
+
+table ReduceSumOption {
+  
+}
+
+table ReduceMulOption {
+  
+}
+
+union ReduceType {
+  ReduceMinOption,
+  ReduceMaxOption,
+  ReduceMeanOption,
+  ReduceSumOption,
+  ReduceMulOption, 
+}
+
 
 enum PoolType: byte {
   MAX_POOL,
@@ -208,18 +460,6 @@ table Conv3DOption {
     relu6:bool = false;
 }
 
-enum ElementwiseType : byte {
-    PRODUCT = 0,
-    SUM = 1,
-    MAXIMUM = 2,
-    SUB = 3
-}
-
-table ElementwiseOption {
-    type:ElementwiseType;
-    coeff:[float];
-}
-
 
 table InnerProductOption {
     outputCount:int;
@@ -286,8 +526,6 @@ table RoiPoolingOption {
     spatialScale:float;
 }
 
-
-
 table ScaleOption  {
     channels:int;
     scaleData:[float];
@@ -304,17 +542,62 @@ table InputOption {
     dformat:DataFormat;
 }
 
-union OpOptionType {
+table DefaultOption {
+}
+
+union OpOption {
+  DefaultOption,
+  // Constant Operators
   ConstOption,
+  // Elementwise Operators
+  AbsOption,
+  BoundedReluOption,
+  ClipOption,
+  ClipV2Option,
+  ClippedReluOption,
+  EluOption,
+  ExpOption,
+  GeluTanhOption,
+  HardSigmoidOption,
+  HardSwishOption,
+  LeakyReluOption,
+  LinearOption,
+  LogOption,
+  LogisticOption,
+  LogSigmoidOption,
+  MishOption,
+  PowOption,
+  PReluOption,
   ReluOption,
   Relu6Option,
-  ClippedReluOption,
-  LeakyReluOption,
-  PReluOption, 
-  EluOption,
-  SeluOption, 
-  TanhOption,
+  RoundOption,
+  SeluOption,
   SigmoidOption,
+  SoftReluOption,
+  SoftReluV2Option,
+  SqrtOption,
+  SwishOption,
+  TanhOption,
+  // Binary Operators 
+  AddOption,
+  MulOption,
+  MinOption,
+  MaxOption,
+  MeanOption,
+  DivOption,
+  GreaterEqualOption,
+  GreatherThanOption,
+  LessEqualOption,
+  LessThanOption,
+  EqualToOption,
+  NotEqualOption,
+  // Reduction Operators 
+  ReduceMinOption,
+  ReduceMaxOption,
+  ReduceMeanOption,
+  ReduceSumOption,
+  ReduceMulOption, 
+  // Others
   Pool2DOption,
   Pool3DOption,
   ReshapeOption,
@@ -325,7 +608,6 @@ union OpOptionType {
   BatchNormOption,
   Conv2DOption,
   Conv3DOption, 
-  ElementwiseOption,
   InnerProductOption,
   LRNOption,
   NormalizeOption,

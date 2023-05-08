@@ -9,8 +9,9 @@
 #ifndef MNN_PLUGIN_PLUGIN_CONTEXT_HPP_
 #define MNN_PLUGIN_PLUGIN_CONTEXT_HPP_
 
+#include <ace/tensor.h>
+
 #include <ace/Interpreter.hpp>  // Backend
-#include <ace/Tensor.hpp>
 #include <unordered_map>
 #include <vector>
 

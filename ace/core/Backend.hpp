@@ -9,8 +9,9 @@
 #ifndef Backend_hpp
 #define Backend_hpp
 
+#include <ace/tensor.h>
+
 #include <ace/ErrorCode.hpp>
-#include <ace/Tensor.hpp>
 #include <map>
 #include <memory>
 #include <vector>

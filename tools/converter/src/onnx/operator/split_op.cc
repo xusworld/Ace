@@ -35,7 +35,7 @@ void SplitOnnx::parse(ace::OpT* dstOp, const onnx::NodeProto* onnxNode,
   }
   param->axis = axis;
   param->slicePoints = slicePoints;
-  param->sourceType = ace::NetSource_TENSORFLOW;
+  param->sourceType = ace::FrontendFramework_TENSORFLOW;
   dstOp->main.value = param;
 }
 

@@ -24,20 +24,25 @@ class RemoveUnusefulOp : public RemoveTestNoUseOps {
     static auto unuseExtraOpType = std::vector<std::string>(
         {"Identity", "IdentityN", "NoOp", "Assign", "Print", "Assert",
          "StopGradient", "Enter", "NextIteration"});
+
+    // 判断 op 是否在待删除列表中
     if (std::find(unuseOpType.begin(), unuseOpType.end(), op->type) !=
         unuseOpType.end()) {
       return true;
     }
+
     if (op->type == OpType_Extra) {
       if (std::find(unuseExtraOpType.begin(), unuseExtraOpType.end(),
                     op->main.AsExtra()->type) != unuseExtraOpType.end()) {
         return true;
       }
-      if (netPtr->sourceType == ace::NetSource_CAFFE &&
+      if (netPtr->sourceType == ace::FrontendFramework_CAFFE &&
           op->main.AsExtra()->type == "Split") {
         return true;
       }
     }
+
+    // 框架内部特殊的处理逻辑
     if (op->type == OpType_Cast) {
       if (op->main.AsCastParam()->dstT == op->main.AsCastParam()->srcT) {
         return true;
@@ -51,11 +56,11 @@ class RemoveUnusefulOp : public RemoveTestNoUseOps {
         return true;
       }
     }
-    if (op->type == OpType_Concat) {
-      if (op->inputIndexes.size() == 1) {
-        return true;
-      }
+    // 如果 Op 是 Concat O, 但是 op 的输入只有一个，则需删除
+    if (op->type == OpType_Concat && op->inputIndexes.size() == 1) {
+      return true;
     }
+    // 如果 Op 是 Slice Op, 但是 op 是输出只有一个，则需删除
     if (op->type == OpType_Slice && op->outputIndexes.size() == 1) {
       return true;
     }

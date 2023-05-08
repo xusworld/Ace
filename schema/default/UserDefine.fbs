@@ -1,5 +1,7 @@
 include "Tensor.fbs";
+
 namespace ace;
+
 table TensorConvertInfo {
     source:DATA_FORMAT;
     dest:DATA_FORMAT;

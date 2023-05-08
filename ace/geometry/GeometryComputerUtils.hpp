@@ -8,25 +8,33 @@
 
 #ifndef GeometryComputerUtils_hpp
 #define GeometryComputerUtils_hpp
+
 #include "core/schedule.h"
 #include "geometry/GeometryComputer.hpp"
+
 namespace ace {
 class GeometryComputerUtils {
  public:
   MNN_PUBLIC static void makeRaster(const CommandBuffer& srcBuffer,
                                     CommandBuffer& dstBuffer,
                                     GeometryComputer::Context& ctx);
+
   static void addConvert(const CommandBuffer& srcBuffer,
                          CommandBuffer& dstBuffer,
                          GeometryComputer::Context& ctx);
+
   static Command makeCommand(flatbuffers::FlatBufferBuilder& builder,
                              const std::vector<Tensor*>& inputs,
                              const std::vector<Tensor*>& outputs);
+
   static Command makeBinary(int type, Tensor* input0, Tensor* input1,
                             Tensor* output);
+
   static Command makeReduce(ReductionType type, Tensor* input0, Tensor* output);
+
   static Command makeUnary(UnaryOpOperation type, Tensor* input0,
                            Tensor* output);
+
   static Command makeMatMul(Tensor* input0, Tensor* input1, Tensor* output,
                             Tensor* Bias = nullptr, bool transposeA = false,
                             bool transposeB = false);

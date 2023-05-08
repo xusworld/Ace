@@ -9,7 +9,7 @@
 #ifndef TensorUtils_hpp
 #define TensorUtils_hpp
 
-#include <ace/Tensor.hpp>
+#include <ace/tensor.h>
 
 #include "Tensor_generated.h"
 #include "ace/types.h"

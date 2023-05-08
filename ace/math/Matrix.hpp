@@ -9,9 +9,9 @@
 #ifndef Matrix_hpp
 #define Matrix_hpp
 
+#include <ace/tensor.h>
 #include <stdio.h>
 
-#include <ace/Tensor.hpp>
 #include <memory>
 namespace ace {
 namespace Math {

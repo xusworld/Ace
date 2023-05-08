@@ -27,32 +27,40 @@ class RemoveTestNoUseOps : public PostConverter {
 
   virtual bool shouldDeleteOutput(const ace::OpT* op) const = 0;
 
+  // 删除 useless op 的执行逻辑
   virtual bool onExecute(std::unique_ptr<ace::NetT>& net) const override {
     const ace::NetT* const netPtr = net.get();
 
     std::unordered_set<int> removedInputs;
     for (auto iter = net->oplists.begin(); iter != net->oplists.end();) {
+      // 获取当前 op
       auto& op = *iter;
+      // 判断是否删除当前 op
       bool shouldDelete = shouldDeleteJudge(op.get(), netPtr);
       if (!shouldDelete) {
         iter++;
         continue;
       }
+      // 1. 判断是否删除 output
       bool deleteOutput = shouldDeleteOutput(op.get());
-      // Find the next op
+      // 如果当前 op 的输入或者输入为空，则直接从 op 列表中删除
       if (op->outputIndexes.empty() || op->inputIndexes.empty()) {
         iter = net->oplists.erase(iter);
         continue;
       }
-
+      // op 的第一个输入
       auto originInput = op->inputIndexes[0];
+      // op 的所有输出
       auto originOutputs = op->outputIndexes;
+      // 遍历计算图上所有的 op 列表
       for (auto subIter = net->oplists.begin(); subIter != net->oplists.end();
            subIter++) {
         auto& subOp = *subIter;
-        if (deleteOutput) {
+
+        if (deleteOutput) {  // 删除 op 所有的输出
           for (auto iter = subOp->inputIndexes.begin();
                iter != subOp->inputIndexes.end();) {
+            // 判断遍历节点的输入是不是在当前节点的输出中，如果是，则删除该输出
             if (std::find(originOutputs.begin(), originOutputs.end(), *iter) !=
                 originOutputs.end()) {
               iter = subOp->inputIndexes.erase(iter);
@@ -60,8 +68,9 @@ class RemoveTestNoUseOps : public PostConverter {
             }
             iter++;
           }
-        } else {
+        } else {  // 不删除 op 的输出
           for (int v = 0; v < subOp->inputIndexes.size(); ++v) {
+            // 如果遍历节点的某个输入在待删除节点的输出中，则将待删除节点的输入作为遍历节点的输入
             if (std::find(originOutputs.begin(), originOutputs.end(),
                           subOp->inputIndexes[v]) != originOutputs.end()) {
               subOp->inputIndexes[v] = originInput;
@@ -69,6 +78,8 @@ class RemoveTestNoUseOps : public PostConverter {
           }
         }
       }
+
+      // 2. 判断是否删除输入
       bool removeUselessInput = shouldRemoveUnusefulInputs(op.get());
       if (removeUselessInput) {
         for (int input : op->inputIndexes) {
@@ -91,6 +102,7 @@ class RemoveTestNoUseOps : public PostConverter {
         }
       }
     }
+
     // Set reference count 1 for all net outputs.
     for (const auto& op : net->oplists) {
       for (int output : op->outputIndexes) {

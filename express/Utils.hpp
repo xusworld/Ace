@@ -8,7 +8,8 @@
 
 #ifndef Utils_hpp
 #define Utils_hpp
-#include <ace/Tensor.hpp>
+#include <ace/tensor.h>
+
 #include <ace/expr/Executor.hpp>
 #include <ace/expr/Expr.hpp>
 

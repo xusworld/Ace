@@ -8,11 +8,11 @@
 
 #define MNN_OPEN_TIME_TRACE
 #include <ace/MNNDefine.h>
+#include <ace/tensor.h>
 #include <stdlib.h>
 
 #include <ace/AutoTime.hpp>
 #include <ace/Interpreter.hpp>
-#include <ace/Tensor.hpp>
 #include <cstring>
 #include <memory>
 #include <string>

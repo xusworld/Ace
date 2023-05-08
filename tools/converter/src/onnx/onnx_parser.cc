@@ -1,11 +1,11 @@
 #include <flatbuffers/idl.h>
 #include <flatbuffers/minireflect.h>
 #include <flatbuffers/util.h>
+#include <glog/logging.h>
 
 #include <iostream>
 
 #include "ace_generated.h"
-#include "logkit.h"
 #include "onnx.pb.h"
 #include "onnxConverter.hpp"
 #include "onnx_node_parser_manager.h"
@@ -15,99 +15,97 @@
 namespace ace {
 namespace parser {
 
-int OnnxToAceModel(const std::string inputModel, const std::string bizCode,
+int OnnxToAceModel(const std::string& onnx_model_path,
+                   const std::string& bizCode,
                    std::unique_ptr<ace::NetT>& netT) {
-  onnx::ModelProto onnxModel;
-  // read ONNX Model
-  bool success = ace::parser::OnnxReadProtoFromBinary(inputModel, &onnxModel);
-  DCHECK(success) << "read onnx model failed: " << inputModel;
+  // Set deep learning framework
+  netT->sourceType = ace::FrontendFramework_ONNX;
+  netT->bizCode = bizCode;
 
-  LOG(INFO) << "ONNX Model ir version: " << onnxModel.ir_version();
+  std::map<std::string, ace::OpT*> nodesMap;
+  std::map<std::string, int> name2InputIdx;
 
-  const auto& onnxGraph = onnxModel.graph();
-  const int nodeCount = onnxGraph.node_size();
+  onnx::ModelProto onnx_model;
 
-  std::shared_ptr<OnnxTmpGraph> onnxTempGraph(new OnnxTmpGraph(&onnxGraph));
+  bool success = OnnxReadProtoFromBinary(onnx_model_path, &onnx_model);
+  CHECK(success) << "Read onnx model failed: " << onnx_model_path;
+  LOG(INFO) << "ONNX IR version: " << onnx_model.ir_version();
+  LOG(INFO) << "ONNX Model version:" << onnx_model.model_version();
 
-  // op_name: name
-  std::map<std::string, ace::OpT*> mnnNodesMap;
-  // all tensors container
-  std::map<std::string, int> tensorsName;
-  // find the inputs which do not have initializer
-  const auto& initializers = onnxTempGraph->mInitializers;
-  const auto& inputs = onnxTempGraph->mInputs;
-  const auto& outputs = onnxTempGraph->mOutputs;
-  const auto& constantNodeToDelete = onnxTempGraph->mConstantNodeToDelete;
-  for (const auto& iter : inputs) {
-    bool notHaveInitializer =
-        initializers.find(iter.first) == initializers.end();
-    if (notHaveInitializer) {
-      netT->tensorName.push_back(iter.first);
-      tensorsName.insert(std::make_pair(iter.first, tensorsName.size()));
+  // onnx compute graph
+  const auto& onnx_graph = onnx_model.graph();
+  const int nodeCount = onnx_graph.node_size();
+  std::shared_ptr<OnnxTmpGraph> onnxTmpGraph(new OnnxTmpGraph(&onnx_graph));
+
+  // auto onnxTmpGraph = BuildOnnxGraph(onnx_model_path);
+  const auto& initializers = onnxTmpGraph->GetModelInitializers();
+  const auto& inputs = onnxTmpGraph->GetModelInputs();
+  const auto& outputs = onnxTmpGraph->GetModelOutputs();
+
+  // Handle inputs
+  LOG(INFO) << "inputs.size(): " << inputs.size();
+  for (const auto& input : inputs) {
+    if (initializers.find(input.first) == initializers.end()) {
+      netT->tensorName.push_back(input.first);
+      name2InputIdx.insert(std::make_pair(input.first, name2InputIdx.size()));
     }
   }
 
-  // set input node to MNN net
-  for (const auto& iter : tensorsName) {
-    // here tensorsName are true Input node name
+  for (const auto& iter : name2InputIdx) {
     ace::OpT* op = new ace::OpT;
     op->name = iter.first;
     op->type = ace::OpType_Input;
     op->main.type = ace::OpParameter_Input;
+
     auto inputParam = new ace::InputT;
     const auto it = inputs.find(iter.first);
     DCHECK(it != inputs.end()) << "Input Paramter ERROR ==> " << iter.first;
+
+    auto info = it->second;
     const auto& tensorInfo = (it->second)->type().tensor_type();
     const int inputDimSize = tensorInfo.shape().dim_size();
     inputParam->dims.resize(inputDimSize);
     for (int i = 0; i < inputDimSize; ++i) {
       inputParam->dims[i] = tensorInfo.shape().dim(i).dim_value();
     }
+
     inputParam->dtype = ToAceDataType(tensorInfo.elem_type());
     inputParam->dformat = ace::DATA_FORMAT_NCHW;
-    op->outputIndexes.push_back(tensorsName[iter.first]);
+    op->outputIndexes.push_back(name2InputIdx[iter.first]);
     op->main.value = inputParam;
-    mnnNodesMap.insert(std::make_pair(iter.first, op));
+    nodesMap.insert(std::make_pair(iter.first, op));
     netT->oplists.emplace_back(op);
   }
 
-  for (int i = 0; i < nodeCount; ++i) {
-    const auto& onnxNode = onnxGraph.node(i);
-    const auto& opType = onnxNode.op_type();
+  for (int i = 0; i < onnxTmpGraph->GetOnnxGraph()->node_size(); ++i) {
+    const auto& onnx_node = onnxTmpGraph->GetOnnxGraph()->node(i);
+    const auto& op_type = onnx_node.op_type();
 
-    // name maybe null, use the first output name as node-name
-    const auto& name = onnxNode.output(0);
+    auto opConverter = OnnxNodeParserManager::Global()->Get(op_type);
 
-    // TODO not to use constantNodeToDelete anymore
-    if (constantNodeToDelete.find(name) != constantNodeToDelete.end()) {
-      continue;
-    }
-
-    LOG(INFO) << "OpType: " << opType;
-    auto opConverter = OnnxNodeParserManager::Global()->Get(opType);
-
+    // create a new ace operator
     ace::OpT* op = new ace::OpT;
-    op->name = name;
+    op->name = onnx_node.output(0);
     op->type = opConverter->opType();
     op->main.type = opConverter->type();
-    mnnNodesMap.insert(std::make_pair(name, op));
+    nodesMap.insert(std::make_pair(onnx_node.output(0), op));
 
     // convert initializer to be Constant node(op)
-    for (int k = 0; k < onnxNode.input_size(); ++k) {
-      const auto& inputName = onnxNode.input(k);
+    for (int k = 0; k < onnx_node.input_size(); ++k) {
+      const auto& inputName = onnx_node.input(k);
       const auto it = initializers.find(inputName);
       if (it != initializers.end() &&
-          tensorsName.find(it->first) == tensorsName.end()) {
+          name2InputIdx.find(it->first) == name2InputIdx.end()) {
         // Create const Op
         ace::OpT* constOp = new ace::OpT;
         constOp->type = ace::OpType_Const;
         constOp->main.type = ace::OpParameter_Blob;
         constOp->main.value = OnnxTensorToBlob(it->second);
-        mnnNodesMap.insert(std::make_pair(inputName, constOp));
+        nodesMap.insert(std::make_pair(inputName, constOp));
         auto outputIndex = (int)netT->tensorName.size();
         constOp->name = it->first;
         constOp->outputIndexes.push_back(outputIndex);
-        tensorsName.insert(std::make_pair(it->first, outputIndex));
+        name2InputIdx.insert(std::make_pair(it->first, outputIndex));
         netT->tensorName.emplace_back(constOp->name);
         netT->oplists.emplace_back(constOp);
       }
@@ -115,32 +113,32 @@ int OnnxToAceModel(const std::string inputModel, const std::string bizCode,
 
     // TODO, delete the run() args opInitializers
     std::vector<const onnx::TensorProto*> opInitializers;
-    for (int k = 0; k < onnxNode.input_size(); ++k) {
-      const auto& inputName = onnxNode.input(k);
+    for (int k = 0; k < onnx_node.input_size(); ++k) {
+      const auto& inputName = onnx_node.input(k);
       const auto it = initializers.find(inputName);
       if (it != initializers.end()) {
         opInitializers.push_back(it->second);
       }
     }
-    opConverter->parse(op, &onnxNode, opInitializers);
+    opConverter->parse(op, &onnx_node, opInitializers);
 
     netT->oplists.emplace_back(op);
 
-    const int outputTensorSize = onnxNode.output_size();
+    const int outputTensorSize = onnx_node.output_size();
     for (int ot = 0; ot < outputTensorSize; ++ot) {
-      netT->tensorName.push_back(onnxNode.output(ot));
-      tensorsName.insert(
-          std::make_pair(onnxNode.output(ot), tensorsName.size()));
+      netT->tensorName.push_back(onnx_node.output(ot));
+      name2InputIdx.insert(
+          std::make_pair(onnx_node.output(ot), name2InputIdx.size()));
     }
   }
 
   // set input-output tensor's index
-  for (int i = 0; i < nodeCount; ++i) {
-    const auto& onnxNode = onnxGraph.node(i);
+  for (int i = 0; i < onnxTmpGraph->GetOnnxGraph()->node_size(); ++i) {
+    const auto& onnxNode = onnxTmpGraph->GetOnnxGraph()->node(i);
 
-    auto iter = mnnNodesMap.find(onnxNode.output(0));
-    DCHECK(iter != mnnNodesMap.end()) << "Can't find node: " << onnxNode.name();
-    auto curOp = mnnNodesMap[onnxNode.output(0)];
+    auto iter = nodesMap.find(onnxNode.output(0));
+    DCHECK(iter != nodesMap.end()) << "Can't find node: " << onnxNode.name();
+    auto curOp = nodesMap[onnxNode.output(0)];
 
     // set input index
     const int inputSize = onnxNode.input_size();
@@ -154,8 +152,8 @@ int OnnxToAceModel(const std::string inputModel, const std::string bizCode,
                   << " has empty input, the index is " << j;
         continue;
       }
-      auto iterTensor = tensorsName.find(inputName);
-      DCHECK(iterTensor != tensorsName.end())
+      auto iterTensor = name2InputIdx.find(inputName);
+      DCHECK(iterTensor != name2InputIdx.end())
           << "Can't find tensor: " << inputName;
       curOp->inputIndexes.push_back(iterTensor->second);
     }
@@ -164,21 +162,18 @@ int OnnxToAceModel(const std::string inputModel, const std::string bizCode,
     const int outputSize = onnxNode.output_size();
     for (int j = 0; j < outputSize; ++j) {
       const auto& outputName = onnxNode.output(j);
-      auto iterTensor = tensorsName.find(outputName);
-      DCHECK(iterTensor != tensorsName.end())
+      auto iterTensor = name2InputIdx.find(outputName);
+      DCHECK(iterTensor != name2InputIdx.end())
           << "Can't find tensor: " << outputName;
       curOp->outputIndexes.push_back(iterTensor->second);
     }
   }
 
-  netT->tensorNumber = tensorsName.size();
-  // set MNN net output name
+  netT->tensorNumber = name2InputIdx.size();
+
   for (const auto& iter : outputs) {
     netT->outputName.push_back(iter.first);
   }
-
-  netT->sourceType = ace::NetSource_ONNX;
-  netT->bizCode = bizCode;
 
   return 0;
 }

@@ -8,7 +8,7 @@
 
 #ifndef OpCommonUtils_hpp
 #define OpCommonUtils_hpp
-#include <ace/Tensor.hpp>
+#include <ace/tensor.h>
 
 #include "TensorUtils.hpp"
 namespace ace {

@@ -29,10 +29,10 @@
 #endif
 
 #include <ace/MNNDefine.h>
+#include <ace/tensor.h>
 #include <ace/types.h>
 
 #include <ace/Interpreter.hpp>
-#include <ace/Tensor.hpp>
 
 #include "core/Backend.hpp"
 #include "revertMNNModel.hpp"

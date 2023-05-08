@@ -15,6 +15,7 @@ class GeometryConcat : public GeometryComputer {
                          CommandBuffer& res) const override {
     MNN_ASSERT(1 == outputs.size());
     MNN_ASSERT(inputs.size() >= 1);
+
     int basicAxis = 0;
     bool inputFix = false;
     if (op->type() == OpType_Concat) {

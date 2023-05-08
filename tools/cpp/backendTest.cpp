@@ -8,12 +8,12 @@
 
 #define MNN_OPEN_TIME_TRACE
 
+#include <ace/tensor.h>
 #include <math.h>
 #include <stdlib.h>
 
 #include <ace/AutoTime.hpp>
 #include <ace/Interpreter.hpp>
-#include <ace/Tensor.hpp>
 #include <algorithm>
 #include <cstring>
 #include <fstream>

@@ -7,12 +7,12 @@
 //
 
 #include <ace/MNNDefine.h>
+#include <glog/logging.h>
 #include <math.h>
 
 #include <algorithm>
 #include <cmath>
 
-#include "logkit.h"
 #include "quantizeWeight.hpp"
 
 void InitAlpha(const float* weight, const int weightNum, const int kernelNum,

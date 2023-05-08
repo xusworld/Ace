@@ -56,15 +56,18 @@ Interpreter* Interpreter::createFromFile(const char* file) {
   loader.reset();
   return createFromBufferInternal(net);
 }
+
 Interpreter* Interpreter::createFromBuffer(const void* buffer, size_t size) {
   if (nullptr == buffer || 0 == size) {
-    MNN_PRINT("Buffer is null for create interpreter\n");
+    LOG(INFO) << "Buffer is null for create interpreter";
     return nullptr;
   }
+
   auto net = new Content;
   net->buffer.reset((int)size);
+
   if (nullptr == net->buffer.get()) {
-    MNN_ERROR("Memory not enought!\n");
+    LOG(INFO) << "Allocate memory for net failed.";
     return nullptr;
   }
   ::memcpy(net->buffer.get(), buffer, size);
@@ -77,6 +80,7 @@ Interpreter* Interpreter::createFromBufferInternal(Content* net) {
     MNN_PRINT("Buffer is null for create interpreter\n");
     return nullptr;
   }
+
 #ifndef MNN_BUILD_MINI
   flatbuffers::Verifier verify((const uint8_t*)(net->buffer.get()),
                                net->buffer.size());
@@ -86,13 +90,16 @@ Interpreter* Interpreter::createFromBufferInternal(Content* net) {
     return nullptr;
   }
 #endif
+
   net->net = GetNet(net->buffer.get());
   if (nullptr == net->net->oplists()) {
     MNN_ERROR("Model has no oplist\n");
     delete net;
     return nullptr;
   }
+
   int opSize = net->net->oplists()->size();
+  LOG(INFO) << "Net op size: " << opSize;
   for (int i = 0; i < opSize; ++i) {
     auto op = net->net->oplists()->GetAs<Op>(i);
     if (nullptr == op || nullptr == op->outputIndexes()) {
@@ -299,6 +306,8 @@ Tensor* Interpreter::getSessionInput(const Session* session, const char* name) {
   if (session == nullptr) {
     return nullptr;
   }
+
+  LOG(INFO) << "Input Name: " << name;
   std::unique_lock<std::mutex> _l(mNet->lock);
   auto tensor = session->getInput(name);
   mNet->tensorMap.insert(std::make_pair(tensor, session));

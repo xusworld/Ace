@@ -11,13 +11,16 @@
 #include "geometry/GeometryComputerUtils.hpp"
 
 namespace ace {
+
 class GeometryUnary : public GeometryComputer {
  public:
   virtual bool onCompute(const Op* op, const std::vector<Tensor*>& inputs,
                          const std::vector<Tensor*>& outputs, Context& context,
                          CommandBuffer& res) const override {
+    // 断言输入输出数量
     MNN_ASSERT(1 == inputs.size());
     MNN_ASSERT(1 == outputs.size());
+    // 获取输入输出数值
     auto input = inputs[0];
     auto output = outputs[0];
     UnaryOpOperation unaryType;

@@ -6,10 +6,9 @@
 //  Copyright © 2018, Alibaba Group Holding Limited
 //
 
+#include <ace/tensor.h>
 #include <complex.h>
 #include <string.h>
-
-#include <ace/Tensor.hpp>
 
 #include "ace_generated.h"
 #include "core/Backend.hpp"

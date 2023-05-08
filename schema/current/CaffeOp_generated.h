@@ -2507,10 +2507,10 @@ struct SliceT : public flatbuffers::NativeTable {
   typedef Slice TableType;
   int32_t axis;
   std::vector<int32_t> slicePoints;
-  NetSource sourceType;
+  FrontendFramework sourceType;
   SliceT()
       : axis(0),
-        sourceType(NetSource_CAFFE) {
+        sourceType(FrontendFramework_CAFFE) {
   }
 };
 
@@ -2525,8 +2525,8 @@ struct Slice FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   const flatbuffers::Vector<int32_t> *slicePoints() const {
     return GetPointer<const flatbuffers::Vector<int32_t> *>(6);
   }
-  NetSource sourceType() const {
-    return static_cast<NetSource>(GetField<int8_t>(8, 0));
+  FrontendFramework sourceType() const {
+    return static_cast<FrontendFramework>(GetField<int8_t>(8, 1));
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
@@ -2550,8 +2550,8 @@ struct SliceBuilder {
   void add_slicePoints(flatbuffers::Offset<flatbuffers::Vector<int32_t>> slicePoints) {
     fbb_.AddOffset(6, slicePoints);
   }
-  void add_sourceType(NetSource sourceType) {
-    fbb_.AddElement<int8_t>(8, static_cast<int8_t>(sourceType), 0);
+  void add_sourceType(FrontendFramework sourceType) {
+    fbb_.AddElement<int8_t>(8, static_cast<int8_t>(sourceType), 1);
   }
   explicit SliceBuilder(flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
@@ -2569,7 +2569,7 @@ inline flatbuffers::Offset<Slice> CreateSlice(
     flatbuffers::FlatBufferBuilder &_fbb,
     int32_t axis = 0,
     flatbuffers::Offset<flatbuffers::Vector<int32_t>> slicePoints = 0,
-    NetSource sourceType = NetSource_CAFFE) {
+    FrontendFramework sourceType = FrontendFramework_CAFFE) {
   SliceBuilder builder_(_fbb);
   builder_.add_slicePoints(slicePoints);
   builder_.add_axis(axis);
@@ -5964,7 +5964,7 @@ inline const flatbuffers::TypeTable *SliceTypeTable() {
     { flatbuffers::ET_CHAR, 0, 0 }
   };
   static const flatbuffers::TypeFunction type_refs[] = {
-    NetSourceTypeTable
+    FrontendFrameworkTypeTable
   };
   static const char * const names[] = {
     "axis",

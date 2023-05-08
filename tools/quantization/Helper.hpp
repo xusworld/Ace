@@ -6,13 +6,14 @@
 //  Copyright © 2018, Alibaba Group Holding Limited
 //
 
+#include <ace/tensor.h>
+#include <glog/logging.h>
+
 #include <ace/ImageProcess.hpp>
-#include <ace/Tensor.hpp>
 #include <set>
 #include <string>
 
 #include "ace_generated.h"
-#include "logkit.h"
 
 #pragma once
 class Helper {

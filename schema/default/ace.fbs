@@ -440,7 +440,7 @@ table Net {
     oplists: [Op];
     outputName: [string];
     preferForwardType: ForwardType = CPU;
-    sourceType: NetSource = CAFFE;
+    sourceType: FrontendFramework = CAFFE;
     tensorName: [string];
     tensorNumber: int = 0;
     usage:Usage = INFERENCE;  // used to more compatibility in future

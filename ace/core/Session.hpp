@@ -1,7 +1,8 @@
 #ifndef Session_hpp
 #define Session_hpp
 
-#include <ace/Tensor.hpp>
+#include <ace/tensor.h>
+
 #include <map>
 #include <memory>
 #include <vector>

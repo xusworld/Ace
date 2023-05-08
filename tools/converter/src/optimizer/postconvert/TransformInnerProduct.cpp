@@ -61,7 +61,7 @@ class TransformInnerProduct : public PostConverter {
       for (int i = axis + 1; i < 4; ++i) {
         reshapeP->dims[i] = 1;
       }
-      if (net->sourceType == ace::NetSource_TENSORFLOW) {
+      if (net->sourceType == ace::FrontendFramework_TENSORFLOW) {
         reshapeP->dims[3] = -1;
         reshapeP->dims[1] = 1;
         reshapeP->dims[2] = 1;
@@ -78,7 +78,8 @@ class TransformInnerProduct : public PostConverter {
       reshapeT->inputIndexes.push_back(inputId);
       reshapeT->outputIndexes.push_back(tempId);
       auto opName = op->name;
-      bool needPermute = 1 != axis && net->sourceType == ace::NetSource_CAFFE;
+      bool needPermute =
+          1 != axis && net->sourceType == ace::FrontendFramework_CAFFE;
 
       if (needPermute) {
         // Add Permute

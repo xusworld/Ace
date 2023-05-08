@@ -7,11 +7,11 @@
 //
 #ifndef Executor_hpp
 #define Executor_hpp
+#include <ace/tensor.h>
 #include <ace/types.h>
 
 #include <ace/ErrorCode.hpp>
 #include <ace/Interpreter.hpp>
-#include <ace/Tensor.hpp>
 #include <ace/expr/Expr.hpp>
 #include <mutex>
 #include <set>

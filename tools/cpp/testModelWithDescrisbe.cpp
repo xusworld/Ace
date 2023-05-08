@@ -9,6 +9,7 @@
 #define MNN_OPEN_TIME_TRACE
 
 #include <ace/MNNDefine.h>
+#include <ace/tensor.h>
 #include <ace/types.h>
 #include <math.h>
 #include <stdio.h>
@@ -16,7 +17,6 @@
 
 #include <ace/AutoTime.hpp>
 #include <ace/Interpreter.hpp>
-#include <ace/Tensor.hpp>
 #include <cstring>
 #include <fstream>
 #include <map>

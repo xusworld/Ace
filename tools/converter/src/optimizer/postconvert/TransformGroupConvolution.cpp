@@ -31,7 +31,7 @@ class TransformGroupConvolution : public PostConverter {
                 reinterpret_cast<unsigned short*>(quanWeightBuffer + 1);
             int ci = weightShapePtr[1];
             if (ci == 1 && common->group != 1 &&
-                mNet->sourceType == ace::NetSource_CAFFE) {
+                mNet->sourceType == ace::FrontendFramework_CAFFE) {
               ci = weightShapePtr[0];
             }
             turnConv2DW = common->outputCount == common->group &&

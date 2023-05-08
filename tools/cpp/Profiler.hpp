@@ -9,11 +9,11 @@
 #ifndef Profiler_hpp
 #define Profiler_hpp
 
+#include <ace/tensor.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #include <ace/Interpreter.hpp>
-#include <ace/Tensor.hpp>
 #include <map>
 #include <string>
 #include <vector>

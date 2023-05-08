@@ -7,13 +7,13 @@
 //
 
 #include <ace/MNNDefine.h>
+#include <glog/logging.h>
 #include <math.h>
 
 #include <algorithm>
 #include <cmath>
 
 #include "TensorStatistic.hpp"
-#include "logkit.h"
 
 // Given distribution P and Q, KL-Divergence is
 // Sum(P[i] * log(P[i] / Q[i]))

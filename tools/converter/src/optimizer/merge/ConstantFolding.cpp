@@ -40,6 +40,7 @@ ConstantFolding::ConstantFolding() {
 
   auto fold = [this](EXPRP expr) -> bool {
     std::vector<VARP> outputs = helpers::OutputVars(expr);
+    // 仅支持单输出算子
     if (outputs.size() == 1) {
       VARP output;
       if (outputs.size() == 0) {
@@ -47,11 +48,14 @@ ConstantFolding::ConstantFolding() {
       } else {
         output = outputs.at(0);
       }
+      // 获取输出信息
       auto output_info = output->getInfo();
+      // 判断输出信息是否为空
       if (!output_info) {
         return false;
       }
       const void* output_data = output->readMap<void>();
+      // 创建一个保存输出数据的常量
       VARP const_var = _Const(output_data, output_info->dim, output_info->order,
                               output_info->type);
       const_var->setName(expr->name());

@@ -4438,14 +4438,14 @@ struct NetT : public flatbuffers::NativeTable {
   std::vector<std::unique_ptr<OpT>> oplists;
   std::vector<std::string> outputName;
   ForwardType preferForwardType;
-  NetSource sourceType;
+  FrontendFramework sourceType;
   std::vector<std::string> tensorName;
   int32_t tensorNumber;
   Usage usage;
   std::vector<std::unique_ptr<SubGraphProtoT>> subgraphs;
   NetT()
       : preferForwardType(ForwardType_CPU),
-        sourceType(NetSource_CAFFE),
+        sourceType(FrontendFramework_CAFFE),
         tensorNumber(0),
         usage(Usage_INFERENCE) {
   }
@@ -4474,8 +4474,8 @@ struct Net FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   ForwardType preferForwardType() const {
     return static_cast<ForwardType>(GetField<int8_t>(14, 0));
   }
-  NetSource sourceType() const {
-    return static_cast<NetSource>(GetField<int8_t>(16, 0));
+  FrontendFramework sourceType() const {
+    return static_cast<FrontendFramework>(GetField<int8_t>(16, 1));
   }
   const flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *tensorName() const {
     return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *>(18);
@@ -4542,8 +4542,8 @@ struct NetBuilder {
   void add_preferForwardType(ForwardType preferForwardType) {
     fbb_.AddElement<int8_t>(14, static_cast<int8_t>(preferForwardType), 0);
   }
-  void add_sourceType(NetSource sourceType) {
-    fbb_.AddElement<int8_t>(16, static_cast<int8_t>(sourceType), 0);
+  void add_sourceType(FrontendFramework sourceType) {
+    fbb_.AddElement<int8_t>(16, static_cast<int8_t>(sourceType), 1);
   }
   void add_tensorName(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>>> tensorName) {
     fbb_.AddOffset(18, tensorName);
@@ -4577,7 +4577,7 @@ inline flatbuffers::Offset<Net> CreateNet(
     flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<Op>>> oplists = 0,
     flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>>> outputName = 0,
     ForwardType preferForwardType = ForwardType_CPU,
-    NetSource sourceType = NetSource_CAFFE,
+    FrontendFramework sourceType = FrontendFramework_CAFFE,
     flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>>> tensorName = 0,
     int32_t tensorNumber = 0,
     Usage usage = Usage_INFERENCE,
@@ -8103,7 +8103,7 @@ inline const flatbuffers::TypeTable *NetTypeTable() {
     GpuLibraryTypeTable,
     OpTypeTable,
     ForwardTypeTypeTable,
-    NetSourceTypeTable,
+    FrontendFrameworkTypeTable,
     UsageTypeTable,
     SubGraphProtoTypeTable
   };

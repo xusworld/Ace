@@ -6,9 +6,10 @@
 //  Copyright © 2018-2021 Alibaba Group Holding Limited
 //
 
+#include <glog/logging.h>
+
 #include "OnnxExtraManager.hpp"
 #include "ace_generated.h"
-#include "logkit.h"
 
 namespace ace {
 namespace Express {

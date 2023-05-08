@@ -8,7 +8,8 @@
 
 #ifndef Command_hpp
 #define Command_hpp
-#include <ace/Tensor.hpp>
+#include <ace/tensor.h>
+
 #include <memory>
 #include <string>
 namespace ace {
