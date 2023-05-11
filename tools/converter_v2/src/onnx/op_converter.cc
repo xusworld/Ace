@@ -1,5 +1,7 @@
 #include <glog/logging.h>
 
+#include "ir/op_generated.h"
+#include "ir/op_option_generated.h"
 #include "op_converter.h"
 
 namespace ace {
@@ -60,17 +62,13 @@ static int32_t _limit(int64_t i64) {
 }
 
 void OnnxNodeParser::parse(
-    ace::OpT *aceOp, const onnx::NodeProto *onnxNode,
+    ace::OpT *op, const onnx::NodeProto *node,
     std::vector<const onnx::TensorProto *> initializers) {
-  /*
-  auto extra = new ExtraT;
-  aceOp->main.type = OpParameter_Extra;
-  aceOp->main.value = extra;
+  auto option = new DefaultOptionT;
+  op->type = OpType_Default;
+  op->option.value = option;
 
-  extra->engine = "ONNX";
-  extra->type = onnxNode->op_type();
-
-  for (auto srcAttr : onnxNode->attribute()) {
+  for (auto srcAttr : node->attribute()) {
     std::unique_ptr<AttributeT> attr(new AttributeT);
     attr->key = srcAttr.name();
     switch (srcAttr.type()) {
@@ -89,7 +87,7 @@ void OnnxNodeParser::parse(
         }
         break;
       case onnx::AttributeProto_AttributeType_TENSOR:
-        attr->tensor.reset(OnnxTensorToBlob(&srcAttr.t()));
+        attr->tensor.reset(OnnxTensorToAceTensor(&srcAttr.t()));
         break;
       default:
         break;
@@ -98,9 +96,8 @@ void OnnxNodeParser::parse(
     attr->i = _limit(srcAttr.i());
     attr->s = srcAttr.s();
     attr->f = srcAttr.f();
-    extra->attr.emplace_back(std::move(attr));
+    option->attr.emplace_back(std::move(attr));
   }
-*/
 }
 
 }  // namespace model

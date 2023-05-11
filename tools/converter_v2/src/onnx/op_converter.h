@@ -21,8 +21,7 @@ class OnnxNodeParser {
   virtual void parse(ace::OpT*, const onnx::NodeProto*,
                      std::vector<const onnx::TensorProto*>);
 
-  virtual ace::OpOption type() { return OpOption_DefaultOption; }
-  virtual ace::OpType opType() { return OpType_Default; }
+  virtual ace::OpType type() { return OpType_Default; }
 
  protected:
   std::string onnxOpType_;
@@ -67,12 +66,8 @@ class OnnxNodeParserRegister {
     virtual ~clsname() = default;                                           \
     virtual void parse(ace::OpT* dstOp, const onnx::NodeProto* onnxNode,    \
                        std::vector<const onnx::TensorProto*> initializers); \
-    virtual ace::OpType opType();                                           \
-    virtual ace::OpParameter type();                                        \
+    virtual ace::OpType type();                                             \
   };
-
-#define REGISTER_ONNX_NODE_PARSER(name, opType) \
-  static OnnxNodeParserRegister<name> _parser_##opType(#opType)
 
 }  // namespace model
 }  // namespace ace

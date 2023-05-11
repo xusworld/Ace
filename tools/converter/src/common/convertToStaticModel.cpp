@@ -32,6 +32,7 @@ void genStaticModel(CommandBuffer buffer, const std::string& modelName,
   std::unique_ptr<ace::NetT> netT = std::unique_ptr<ace::NetT>(new ace::NetT());
   netT->usage = Usage_INFERENCE_STATIC;
   std::map<Tensor*, int> tensorMap;
+
   // add Tensors to netT
   for (auto& iter : buffer.command) {
     std::function<void(Tensor*)> insertTensor = [&](Tensor* t) {
@@ -58,6 +59,7 @@ void genStaticModel(CommandBuffer buffer, const std::string& modelName,
       insertTensor(t);
     }
   }
+
   // add tensors' describe to netT
   for (auto tensorPair : tensorMap) {
     auto tensor = tensorPair.first;

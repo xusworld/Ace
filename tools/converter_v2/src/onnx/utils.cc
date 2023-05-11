@@ -3,6 +3,7 @@
 
 #include <fstream>
 
+#include "ir/tensor_generated.h"
 #include "ir/types_generated.h"
 #include "utils.h"
 namespace ace {
@@ -18,7 +19,8 @@ static int32_t _limit(int64_t i64) {
   return i64;
 }
 
-ace::DataType ToAceDataType(const onnx::TensorProto_DataType dtype) {
+ace::DataType OnnxDataTypeToAceDataType(
+    const onnx::TensorProto_DataType dtype) {
   switch (dtype) {
     case onnx::TensorProto_DataType_FLOAT:
       return ace::DataType_FLOAT_32;
@@ -37,21 +39,23 @@ ace::DataType ToAceDataType(const onnx::TensorProto_DataType dtype) {
   }
 }
 
-ace::TensorT* OnnxTensorToBlob(const onnx::TensorProto* constantTp) {
-  /*
-  auto blob = new ace::TensorT;
-  auto dataType = ToAceDataType(constantTp->data_type());
+ace::TensorT* OnnxTensorToAceTensor(const onnx::TensorProto* constantTp) {
+  ace::TensorT* tensor = new ace::TensorT;
+  tensor->name = "";
+  tensor->dtype = OnnxDataTypeToAceDataType(constantTp->data_type());
+  tensor->dformat = ace::DataFormat_NCHW;
 
-  blob->dataType = dataType;
-  blob->dataFormat = ace::DATA_FORMAT_NCHW;
-
+  // Set TensorShape
   size_t dimSize = constantTp->dims().size();
-  blob->dims.resize(dimSize);
+  auto shape = new ace::TensorShapeT;
+  shape->dims.resize(dimSize);
   size_t dataSize = 1;
   for (int i = 0; i < dimSize; ++i) {
-    blob->dims[i] = constantTp->dims(i);
+    shape->dims[i] = constantTp->dims(i);
     dataSize = dataSize * constantTp->dims(i);
   }
+  tensor->shape.reset(shape);
+
   std::vector<int64_t> alignContent(
       (constantTp->raw_data().size() + sizeof(int64_t) - 1) / sizeof(int64_t));
   ::memcpy(alignContent.data(), constantTp->raw_data().data(),
@@ -74,99 +78,54 @@ ace::TensorT* OnnxTensorToBlob(const onnx::TensorProto* constantTp) {
       break;
   }
   if (0 == dataSize) {
-    // Empty blob
-    return blob;
+    return tensor;
   }
 
   if (!tensor_content) {
-    DLOG(FATAL) << "Convert no data, "
-                   "Please make sure ";
+    DLOG(FATAL) << "Convert no data, Please make sure ";
   }
 
+  auto cache_data = new ace::CacheDataT;
   switch (constantTp->data_type()) {
-    case onnx::TensorProto_DataType_DOUBLE: {
-      blob->float32s.resize(dataSize);
-      auto source = (double*)tensor_content;
-
+    case onnx::TensorProto_DataType_UINT8: {
+      auto source = (uint8_t*)tensor_content;
+      cache_data->u.resize(dataSize);
       for (int i = 0; i < dataSize; ++i) {
-        blob->float32s[i] = source[i];
-      }
-      break;
-    }
-    case onnx::TensorProto_DataType_INT64: {
-      blob->int32s.resize(dataSize);
-      auto source = (int64_t*)tensor_content;
-
-      for (int i = 0; i < dataSize; ++i) {
-        blob->int32s[i] = _limit(source[i]);
-      }
-      break;
-    }
-    case onnx::TensorProto_DataType_INT32: {
-      auto source = (int32_t*)tensor_content;
-      blob->int32s.resize(dataSize);
-      for (int i = 0; i < dataSize; ++i) {
-        blob->int32s[i] = source[i];
-      }
-      break;
-    }
-    case onnx::TensorProto_DataType_UINT16: {
-      auto source = (uint16_t*)tensor_content;
-      blob->int32s.resize(dataSize);
-      for (int i = 0; i < dataSize; ++i) {
-        blob->int32s[i] = source[i];
-      }
-      break;
-    }
-    case onnx::TensorProto_DataType_INT16: {
-      auto source = (int16_t*)tensor_content;
-      blob->int32s.resize(dataSize);
-      for (int i = 0; i < dataSize; ++i) {
-        blob->int32s[i] = source[i];
-      }
-      break;
-    }
-    case onnx::TensorProto_DataType_BOOL: {
-      auto source = (bool*)tensor_content;
-      blob->int32s.resize(dataSize);
-      for (int i = 0; i < dataSize; ++i) {
-        blob->int32s[i] = source[i];
+        cache_data->u[i] = source[i];
       }
       break;
     }
     case onnx::TensorProto_DataType_INT8: {
       auto source = (int8_t*)tensor_content;
-      blob->int8s.resize(dataSize);
+      cache_data->c.resize(dataSize);
       for (int i = 0; i < dataSize; ++i) {
-        blob->int8s[i] = source[i];
+        cache_data->c[i] = source[i];
       }
       break;
     }
-    case onnx::TensorProto_DataType_UINT8: {
-      auto source = (uint8_t*)tensor_content;
-      blob->uint8s.resize(dataSize);
+    case onnx::TensorProto_DataType_INT32: {
+      auto source = (int32_t*)tensor_content;
+      cache_data->i.resize(dataSize);
       for (int i = 0; i < dataSize; ++i) {
-        blob->uint8s[i] = source[i];
+        cache_data->c[i] = source[i];
       }
       break;
     }
     case onnx::TensorProto_DataType_FLOAT: {
       float* tempFloatData = (float*)tensor_content;
-      blob->float32s.resize(dataSize);
+      cache_data->i.resize(dataSize);
       for (int i = 0; i < dataSize; ++i) {
-        blob->float32s[i] = tempFloatData[i];
+        cache_data->i[i] = tempFloatData[i];
       }
       break;
     }
     default: {
-      DLOG(FATAL) << "Don't support " << constantTp->data_type();
+      LOG(FATAL) << "Don't support " << constantTp->data_type();
       break;
     }
   }
 
-  return blob;
-*/
-  return nullptr;
+  return tensor;
 }
 
 }  // namespace model

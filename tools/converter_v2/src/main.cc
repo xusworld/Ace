@@ -15,5 +15,10 @@ int main(int argc, char *argv[]) {
   std::unique_ptr<ace::GraphProtoT> graph =
       std::unique_ptr<ace::GraphProtoT>(new ace::GraphProtoT());
   ace::model::OnnxToAceModel(onnx_model_path, graph);
+
+  flatbuffers::FlatBufferBuilder builderOutput(1024);
+  builderOutput.ForceDefaults(true);
+  auto len = MNN::Net::Pack(builderOutput, netT.get());
+  builderOutput.Finish(len);
   return 0;
 }

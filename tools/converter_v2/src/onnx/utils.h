@@ -11,9 +11,9 @@
 namespace ace {
 namespace model {
 
-ace::DataType ToAceDataType(const onnx::TensorProto_DataType dtype);
+ace::DataType OnnxDataTypeToAceDataType(const onnx::TensorProto_DataType dtype);
 
-ace::TensorT* OnnxTensorToBlob(const onnx::TensorProto* constantTp);
+ace::TensorT* OnnxTensorToAceTensor(const onnx::TensorProto* constantTp);
 
 }  // namespace model
 }  // namespace ace

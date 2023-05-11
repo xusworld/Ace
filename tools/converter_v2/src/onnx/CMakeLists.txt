@@ -1,4 +1,3 @@
-message (STATUS "tools/converter/src/onnx/CMakeLists.txt")
 
 protobuf_generate_cpp(ONNX_PROTO_SRCS ONNX_PROTO_HDRS
     ${CMAKE_CURRENT_LIST_DIR}/proto/onnx.proto
@@ -6,7 +5,7 @@ protobuf_generate_cpp(ONNX_PROTO_SRCS ONNX_PROTO_HDRS
 )
 
 file(GLOB ONNX_SRC ${CMAKE_CURRENT_LIST_DIR}/*.cc)
-file(GLOB ONNX_OPERATOR_SRC ${CMAKE_CURRENT_LIST_DIR}/operator/*.cc)
+file(GLOB ONNX_OPERATOR_SRC ${CMAKE_CURRENT_LIST_DIR}/ops/*.cc)
 list(APPEND ONNX_SRC ${ONNX_OPERATOR_SRC})
 
 add_library(onnx_converter OBJECT ${ONNX_SRC} ${ONNX_PROTO_SRCS})
