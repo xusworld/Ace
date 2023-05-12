@@ -1,4 +1,5 @@
 # Prerequisites
+.cache
 *.d
 
 # Compiled Object files
@@ -32,6 +33,8 @@
 *.app
 
 # dir
+./cache
+./v2/build
 build
 android_build
 nv_gpu_build
@@ -41,3 +44,4 @@ output
 models
 third-party
 backup
+

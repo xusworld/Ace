@@ -325,10 +325,6 @@ if (NOT MSVC)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fstrict-aliasing -ffunction-sections -fdata-sections -ffast-math")
 endif()
 
-# Metal
-set(MNN_DEPS "")
-set(MNN_EXTRA_DEPENDS "")
-list(APPEND MNN_DEPS MNN)
 
 # # Plugin
 # if(MNN_WITH_PLUGIN)
@@ -409,8 +405,11 @@ endif()
 
 
 add_dependencies(MNN MNNCore MNNCV MNNTransform MNNMath MNNCPU)
+
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/src)
+
 # add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/tools/converter)
-add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/tools/converter_v2)
+# add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/tools/converter_v2)
 
 if(CMAKE_SYSTEM_NAME MATCHES "^Linux")
 # Using -pthread, needed by thread-safe implemention of glibc, is better than only using -lpthread
