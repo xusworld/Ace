@@ -8,7 +8,67 @@
 #include "status.h"
 
 namespace ace {
-namespace device {
+
+// template <size_t index, typename Arg, typename... Args>
+// struct ParamPackType;
+
+// template <size_t index, typename Arg, typename... Args>
+// struct ParamPackType : ParamPackType<index - 1, Args...> {};
+
+// template <typename Arg, typename... Args>
+// struct ParamPackType<0, Arg, Args...> {
+//   typedef Arg type;
+// };
+
+// template <typename T>
+// struct function_traits;
+
+// template <typename RetType, typename... Args>
+// struct function_traits<RetType(Args...)> {
+//   typedef RetType return_type;
+//   enum { size = sizeof...(Args) };
+
+//   template <size_t index>
+//   struct Param {
+//     typedef typename ParamPackType<index, Args...>::type type;
+//   };
+// };
+
+// template <typename ClassType, typename RetType, typename... Args>
+// struct function_traits<RetType (ClassType::*)(Args...) const> {
+//   typedef RetType return_type;
+//   enum { size = sizeof...(Args) };
+
+//   template <size_t index>
+//   struct Param {
+//     typedef typename ParamPackType<index, Args...>::type type;
+//   };
+// };
+
+// template <typename LambdaFunc>
+// struct function_traits : function_traits<decltype(&LambdaFunc::operator())>
+// {};
+
+// template <typename RetType, typename... Args>
+// struct function_traits<RetType(Args...) const>
+//     : function_traits<RetType(Args...)> {};
+
+/// Judge if the function return type is void.
+// template <typename>
+// struct is_void_function;
+
+// template <typename functor>
+// struct is_void_function
+//     : std::is_void<typename function_traits<functor>::return_type> {};
+
+// /// Judge if the function return type is Status.
+// template <typename>
+// struct is_status_function;
+
+// template <typename functor>
+// struct is_status_function
+//     : std::is_same<typename function_traits<functor>::return_type, Status>
+//     {};
 
 /// Type changing for  std::vector<bool> which considered a mistake in STL.
 template <typename T>
@@ -159,5 +219,4 @@ struct DataTrait<Ttype, DataType_UINT_64> {
   typedef unsigned int* PtrDtype;
 };
 
-}  // namespace device
 }  // namespace ace

@@ -4,22 +4,22 @@
 namespace ace {
 
 inline void ThreadPool::launch() {
-  for (size_t i = 0; i < _num_thread; ++i) {
-    _workers.emplace_back([i, this]() {
+  for (size_t i = 0; i < num_thread_; ++i) {
+    workers_.emplace_back([i, this]() {
       // initial
       this->init();
       for (;;) {
         std::function<void(void)> task;
         {
-          std::unique_lock<std::mutex> lock(this->_mut);
-          while (!this->_stop && this->_tasks.empty()) {
-            this->_cv.wait(lock);
+          std::unique_lock<std::mutex> lock(this->mutex_);
+          while (!this->stop_ && this->tasks_.empty()) {
+            this->cv_.wait(lock);
           }
-          if (this->_stop) {
+          if (this->stop_) {
             return;
           }
-          task = std::move(this->_tasks.front());
-          this->_tasks.pop();
+          task = std::move(this->tasks_.front());
+          this->tasks_.pop();
         }
         DLOG(INFO) << " Thread (" << i << ") processing";
         auxiliary_funcs();
@@ -30,18 +30,20 @@ inline void ThreadPool::launch() {
 }
 
 inline void ThreadPool::stop() {
-  std::unique_lock<std::mutex> lock(this->_mut);
-  _stop = true;
+  std::unique_lock<std::mutex> lock(this->mutex_);
+  stop_ = true;
 }
 
-inline void ThreadPool::init() {}
+inline void ThreadPool::init() {
+  LOG(INFO) << "Initialize a thread pool for test";
+}
 
 inline void ThreadPool::auxiliary_funcs() {}
 
 inline ThreadPool::~ThreadPool() {
   stop();
-  this->_cv.notify_all();
-  for (auto& worker : _workers) {
+  this->cv_.notify_all();
+  for (auto& worker : workers_) {
     worker.join();
   }
 }
@@ -55,10 +57,10 @@ inline typename function_traits<functor>::return_type ThreadPool::RunSync(
   std::future<typename function_traits<functor>::return_type> result =
       task->get_future();
   {
-    std::unique_lock<std::mutex> lock(this->_mut);
-    this->_tasks.emplace([&]() { (*task)(); });
+    std::unique_lock<std::mutex> lock(this->mutex_);
+    this->tasks_.emplace([&]() { (*task)(); });
   }
-  this->_cv.notify_one();
+  this->cv_.notify_one();
   return result.get();
 }
 
@@ -72,10 +74,10 @@ ThreadPool::RunAsync(functor function, ParamTypes... args)
   std::future<typename function_traits<functor>::return_type> result =
       task->get_future();
   {
-    std::unique_lock<std::mutex> lock(this->_mut);
-    this->_tasks.emplace([=]() { (*task)(); });
+    std::unique_lock<std::mutex> lock(this->mutex_);
+    this->tasks_.emplace([=]() { (*task)(); });
   }
-  this->_cv.notify_one();
+  this->cv_.notify_one();
   return result;
 }
 }  // namespace ace
