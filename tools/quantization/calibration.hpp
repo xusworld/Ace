@@ -9,13 +9,13 @@
 #ifndef CALIBRATION_HPP
 #define CALIBRATION_HPP
 
-#include <ace/ImageProcess.hpp>
-#include <ace/Interpreter.hpp>
+#include <MNN/ImageProcess.hpp>
 #include <map>
 
 #include "Helper.hpp"
+#include "MNN_generated.h"
 #include "TensorStatistic.hpp"
-#include "ace_generated.h"
+#include "core/Interpreter.hpp"
 
 // Calibration find the optimal threshold according to KL-divergence
 // process: the below process is applied on the whole Conv|DepthwiseConv layers
@@ -29,7 +29,7 @@
 // of symmetricQuan in Convolution Paramter
 class Calibration {
  public:
-  Calibration(ace::NetT* model, const uint8_t* modelBuffer,
+  Calibration(tars::NetT* model, const uint8_t* modelBuffer,
               const int bufferSize, const std::string& configPath,
               std::string originalModelFile, std::string dstModelFile);
 
@@ -39,8 +39,8 @@ class Calibration {
 
  private:
   Calibration();
-  ace::NetT* _originalModel;
-  std::shared_ptr<ace::CV::ImageProcess> _process;
+  tars::NetT* _originalModel;
+  std::shared_ptr<tars::CV::ImageProcess> _process;
   const int _binNums = 2048;
   int _calibrationFileNum = 0;
   int _width;
@@ -48,38 +48,39 @@ class Calibration {
   int _channels;
   int _batch = 32;
   int _quant_bits = 8;
+  bool _winogradOpt = false;
   Helper::PreprocessConfig _preprocessConfig;
   Helper::InputType _inputType;
   std::string _calibrationFilePath;
   std::string _originalModelFile;
   std::string _destModelFile;
-  ace::CV::ImageProcess::Config _imageProcessConfig;
+  tars::CV::ImageProcess::Config _imageProcessConfig;
   std::vector<std::string> _calibrationFiles;
 
   // Tensor and Info
-  std::map<const ace::Tensor*, std::shared_ptr<TensorStatistic>> _featureInfo;
-  std::map<const ace::Tensor*, std::shared_ptr<TensorStatistic>>
+  std::map<const tars::Tensor*, std::shared_ptr<TensorStatistic>> _featureInfo;
+  std::map<const tars::Tensor*, std::shared_ptr<TensorStatistic>>
       _featureInfoOrigin;
-  std::map<int, const ace::Tensor*> _tensorMap;
-  std::map<const ace::Tensor*, int> _tensorIdx;
+  std::map<int, const tars::Tensor*> _tensorMap;
+  std::map<const tars::Tensor*, int> _tensorIdx;
 
   // Op's name, Inputs, Outputs
   std::map<std::string,
-           std::pair<std::vector<ace::Tensor*>, std::vector<ace::Tensor*>>>
+           std::pair<std::vector<tars::Tensor*>, std::vector<tars::Tensor*>>>
       _opInfo;
 
   // The scale results
-  std::map<const ace::Tensor*, float> _scales;
+  std::map<const tars::Tensor*, float> _scales;
 
-  std::shared_ptr<ace::Interpreter> _interpreter;
+  std::shared_ptr<tars::Interpreter> _interpreter;
   // keep mnn forward information
-  ace::Session* _session;
-  ace::Tensor* _inputTensor;
+  tars::Session* _session;
+  tars::Tensor* _inputTensor;
   std::vector<int> _inputTensorDims;
 
-  std::shared_ptr<ace::Interpreter> _interpreterOrigin;
-  ace::Session* _sessionOrigin;
-  ace::Tensor* _inputTensorOrigin;
+  std::shared_ptr<tars::Interpreter> _interpreterOrigin;
+  tars::Session* _sessionOrigin;
+  tars::Tensor* _inputTensorOrigin;
 
   std::string _featureQuantizeMethod = "KL";
   std::string _weightQuantizeMethod = "MAX_ABS";

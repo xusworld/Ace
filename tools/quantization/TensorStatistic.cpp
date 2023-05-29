@@ -6,14 +6,14 @@
 //  Copyright © 2018, Alibaba Group Holding Limited
 //
 
-#include <ace/MNNDefine.h>
-#include <glog/logging.h>
+#include <MNN/MNNDefine.h>
 #include <math.h>
 
 #include <algorithm>
 #include <cmath>
 
 #include "TensorStatistic.hpp"
+#include "logkit.h"
 
 // Given distribution P and Q, KL-Divergence is
 // Sum(P[i] * log(P[i] / Q[i]))
@@ -36,7 +36,7 @@ static float _klDivergence(const std::vector<float>& candidateDis,
   return result;
 }
 
-TensorStatistic::TensorStatistic(const ace::Tensor* tensor, std::string method,
+TensorStatistic::TensorStatistic(const tars::Tensor* tensor, std::string method,
                                  const std::string& name,
                                  float featureClampValue, int binNumber,
                                  GET_THRESHOLD_METHOD thresholdMethod)
@@ -50,7 +50,7 @@ TensorStatistic::TensorStatistic(const ace::Tensor* tensor, std::string method,
     auto channel = tensor->channel();
     mRange.first = 100000.0f;    // Min Init
     mRange.second = -100000.0f;  // Max Init
-    mHostTensor.reset(new ace::Tensor(tensor, ace::Tensor::CAFFE));
+    mHostTensor.reset(new tars::Tensor(tensor, tars::Tensor::CAFFE));
     mDistribution.resize(mBinNumber);
     bool isLittleAmountData = tensor->width() * tensor->height() < 100;
     if (isLittleAmountData) {

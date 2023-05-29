@@ -7,11 +7,11 @@
 //  Copyright © 2018, Alibaba Group Holding Limited
 //
 
-#include <ace/expr/ExprCreator.hpp>
+#include <MNN/expr/ExprCreator.hpp>
 
 #include "SqueezeNetExpr.hpp"
 
-using namespace ace::Express;
+using namespace tars::Express;
 
 // fire module in squeezeNet model
 static VARP fireMoudle(VARP x, int inputChannel, int squeeze_1x1,

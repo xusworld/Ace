@@ -8,18 +8,18 @@
 
 #ifndef ONNXCONVERTER_HPP
 #define ONNXCONVERTER_HPP
-#include <ace/MNNDefine.h>
+#include <MNN/MNNDefine.h>
 
-#include "ace_generated.h"
+#include "MNN_generated.h"
 
-namespace ace {
-namespace parser {
-
-int OnnxToAceModel(const std::string& onnx_model_path,
-                   const std::string& bizCode,
-                   std::unique_ptr<ace::NetT>& netT);
-
-}  // namespace parser
-}  // namespace ace
+/**
+ * @brief convert ONNX model to MNN model
+ * @param inputModel ONNX model name(xxx.onnx)
+ * @param bizCode(not used, always is MNN)
+ * @param MNN net
+ */
+MNN_PUBLIC int onnx2MNNNet(const std::string inputModel,
+                           const std::string bizCode,
+                           std::unique_ptr<tars::NetT>& netT);
 
 #endif  // ONNXCONVERTER_HPP

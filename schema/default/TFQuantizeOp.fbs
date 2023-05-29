@@ -9,7 +9,7 @@
 include "CaffeOp.fbs";
 include "Tensor.fbs";
 include "Type.fbs";
-namespace ace;
+namespace tars;
 
 enum FusedActivation : byte {
 	kTfLiteActNone = 0,

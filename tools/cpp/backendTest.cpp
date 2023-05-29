@@ -8,12 +8,10 @@
 
 #define MNN_OPEN_TIME_TRACE
 
-#include <ace/tensor.h>
 #include <math.h>
 #include <stdlib.h>
 
-#include <ace/AutoTime.hpp>
-#include <ace/Interpreter.hpp>
+#include <MNN/AutoTime.hpp>
 #include <algorithm>
 #include <cstring>
 #include <fstream>
@@ -22,7 +20,9 @@
 #include <sstream>
 #include <string>
 
+#include "core/Interpreter.hpp"
 #include "core/TensorUtils.hpp"
+#include "core/tensor.h"
 #include "rapidjson/document.h"
 
 template <typename T>
@@ -33,17 +33,31 @@ inline T stringConvert(const char* number) {
   return v;
 }
 
-using namespace ace;
+using namespace tars;
 
+static void _zeroInputs(const Interpreter* net, const Session* session) {
+  // Set Other Inputs to Zero
+  auto allInput = net->getSessionInputAll(session);
+  for (auto& iter : allInput) {
+    auto inputTensor = iter.second;
+    auto size = inputTensor->size();
+    if (size <= 0) {
+      continue;
+    }
+    tars::Tensor tempTensor(inputTensor, inputTensor->getDimensionType());
+    ::memset(tempTensor.host<void>(), 0, tempTensor.size());
+    inputTensor->copyFromHostTensor(&tempTensor);
+  }
+}
 static void compareForwadType(
-    Interpreter* net, DeviceType expectType, DeviceType compareType,
+    Interpreter* net, MNNForwardType expectType, MNNForwardType compareType,
     float tolerance,
     const std::map<std::string, std::shared_ptr<Tensor>>& inputs,
     const std::string& stopOp, BackendConfig::PrecisionMode precision,
     int modeNum) {
-  std::vector<std::shared_ptr<ace::Tensor>> correctResult;
+  std::vector<std::shared_ptr<tars::Tensor>> correctResult;
   int index;
-  ace::ScheduleConfig expectConfig, compareConfig;
+  tars::ScheduleConfig expectConfig, compareConfig;
   BackendConfig backendConfig;
   backendConfig.precision = precision;
   expectConfig.type = expectType;
@@ -52,18 +66,19 @@ static void compareForwadType(
   compareConfig.mode = modeNum;
   auto expectSession = net->createSession(expectConfig);
   auto compareSession = net->createSession(compareConfig);
-
+  _zeroInputs(net, expectSession);
+  _zeroInputs(net, compareSession);
   bool allCorrect = true;
 
-  ace::TensorCallBackWithInfo beginCallBack =
-      [&](const std::vector<ace::Tensor*>& t, const OperatorInfo* op) {
+  tars::TensorCallBackWithInfo beginCallBack =
+      [&](const std::vector<tars::Tensor*>& t, const OperatorInfo* op) {
         if (op->name() == stopOp) {
           return false;
         }
         return true;
       };
-  ace::TensorCallBackWithInfo saveExpect =
-      [&](const std::vector<ace::Tensor*>& t, const OperatorInfo* op) {
+  tars::TensorCallBackWithInfo saveExpect =
+      [&](const std::vector<tars::Tensor*>& t, const OperatorInfo* op) {
         if (op->name() == stopOp) {
           return false;
         }
@@ -79,14 +94,16 @@ static void compareForwadType(
               tensor->buffer().host == nullptr) {
             return true;
           }
-          std::shared_ptr<ace::Tensor> copyTensor(
-              ace::Tensor::createHostTensorFromDevice(tensor, true));
+
+          std::shared_ptr<tars::Tensor> copyTensor(
+              new tars::Tensor(tensor, tensor->getDimensionType()));
+          tensor->copyToHostTensor(copyTensor.get());
           correctResult.emplace_back(copyTensor);
         }
         return true;
       };
-  ace::TensorCallBackWithInfo compareExpect =
-      [&](const std::vector<ace::Tensor*>& t, const OperatorInfo* op) {
+  tars::TensorCallBackWithInfo compareExpect =
+      [&](const std::vector<tars::Tensor*>& t, const OperatorInfo* op) {
         if (op->name() == stopOp) {
           return false;
         }
@@ -102,8 +119,11 @@ static void compareForwadType(
               tensor->buffer().host == nullptr) {
             return true;
           }
-          std::shared_ptr<ace::Tensor> copyTensor(
-              ace::Tensor::createHostTensorFromDevice(tensor, true));
+
+          tensor->wait(tars::Tensor::MAP_TENSOR_READ, false);
+          std::shared_ptr<tars::Tensor> copyTensor(
+              new tars::Tensor(tensor, tensor->getDimensionType()));
+          tensor->copyToHostTensor(copyTensor.get());
           auto expectTensor = correctResult[index++];
           auto correct = TensorUtils::compareTensors(
               copyTensor.get(), expectTensor.get(), tolerance, true);
@@ -132,6 +152,7 @@ static void compareForwadType(
   } else {
     return;
   }
+  _zeroInputs(net, compareSession);
   index = 0;
   for (auto& iter : inputs) {
     Tensor* compareInput = net->getSessionInput(
@@ -155,9 +176,9 @@ int main(int argc, const char* argv[]) {
 
   const char* fileName = argv[1];
 
-  auto type = DeviceType::X86;
+  auto type = MNN_FORWARD_CPU;
   if (argc > 2) {
-    type = (DeviceType)stringConvert<int>(argv[2]);
+    type = (MNNForwardType)stringConvert<int>(argv[2]);
   }
   MNN_PRINT("Test forward type: %d\n", type);
 
@@ -169,16 +190,16 @@ int main(int argc, const char* argv[]) {
 
   // create net
   MNN_PRINT("Open Model %s\n", fileName);
-  std::shared_ptr<ace::Interpreter> net = std::shared_ptr<ace::Interpreter>(
-      ace::Interpreter::createFromFile(fileName));
+  std::shared_ptr<tars::Interpreter> net = std::shared_ptr<tars::Interpreter>(
+      tars::Interpreter::createFromFile(fileName));
   net->setSessionMode(Interpreter::Session_Debug);
 
   // create session
   ScheduleConfig config;
-  config.type = DeviceType::X86;
+  config.type = MNN_FORWARD_CPU;
   auto session = net->createSession(config);
 
-  std::map<std::string, std::shared_ptr<ace::Tensor>> inputs;
+  std::map<std::string, std::shared_ptr<tars::Tensor>> inputs;
   std::vector<std::string> inputNames;
   do {
     rapidjson::Document document;
@@ -213,7 +234,7 @@ int main(int argc, const char* argv[]) {
     MNN_PRINT("\n");
     for (auto name : inputNames) {
       auto inputTensor = net->getSessionInput(session, name.c_str());
-      std::shared_ptr<ace::Tensor> givenTensor(
+      std::shared_ptr<tars::Tensor> givenTensor(
           new Tensor(inputTensor, inputTensor->getDimensionType()));
       {
         std::ostringstream fileName;
@@ -238,7 +259,7 @@ int main(int argc, const char* argv[]) {
     }
   } else {
     auto inputTensor = net->getSessionInput(session, NULL);
-    std::shared_ptr<ace::Tensor> givenTensor(
+    std::shared_ptr<tars::Tensor> givenTensor(
         new Tensor(inputTensor, inputTensor->getDimensionType()));
     {
       std::ostringstream fileName;
@@ -276,7 +297,8 @@ int main(int argc, const char* argv[]) {
     stopOp = argv[6];
   }
   FUNC_PRINT_ALL(stopOp.c_str(), s);
-  compareForwadType(net.get(), DeviceType::X86, type, tolerance, inputs, stopOp,
+  net->releaseSession(session);
+  compareForwadType(net.get(), MNN_FORWARD_CPU, type, tolerance, inputs, stopOp,
                     precision, modeNum);
 
   return 0;

@@ -1,11 +1,3 @@
-//
-//  benchmark.cpp
-//  MNN
-//
-//  Created by MNN on 2019/01/31.
-//  Copyright © 2018, Alibaba Group Holding Limited
-//
-
 #include <errno.h>
 #include <float.h>
 #include <math.h>
@@ -28,14 +20,14 @@
 #include <sys/types.h>
 #endif
 
-#include <ace/MNNDefine.h>
-#include <ace/tensor.h>
-#include <ace/types.h>
+#include <MNN/MNNDefine.h>
 
-#include <ace/Interpreter.hpp>
-
-#include "core/Backend.hpp"
+#include "core/Interpreter.hpp"
+#include "core/device.h"
+#include "core/tensor.h"
+#include "glog/logging.h"
 #include "revertMNNModel.hpp"
+
 /**
  TODOs:
  1. dynamically get CPU related info.
@@ -55,6 +47,7 @@ inline bool file_exist(const char* file) {
 
 std::vector<Model> findModelFiles(const char* dir) {
   std::vector<Model> models;
+
   DIR* root;
   if ((root = opendir(dir)) == NULL) {
     std::cout << "open " << dir << " failed: " << strerror(errno) << std::endl;
@@ -71,35 +64,28 @@ std::vector<Model> findModelFiles(const char* dir) {
         models.push_back(std::move(m));
       }
     }
+    break;
   }
   closedir(root);
+
   return models;
 }
 
-void setInputData(ace::Tensor* tensor) {
+void setInputData(tars::Tensor* tensor) {
   float* data = tensor->host<float>();
   Revert::fillRandValue(data, tensor->elementSize());
 }
 
 static inline uint64_t getTimeInUs() {
   uint64_t time;
-#if defined(_MSC_VER)
-  LARGE_INTEGER now, freq;
-  QueryPerformanceCounter(&now);
-  QueryPerformanceFrequency(&freq);
-  uint64_t sec = now.QuadPart / freq.QuadPart;
-  uint64_t usec = (now.QuadPart % freq.QuadPart) * 1000000 / freq.QuadPart;
-  time = sec * 1000000 + usec;
-#else
   struct timeval tv;
   gettimeofday(&tv, nullptr);
   time = static_cast<uint64_t>(tv.tv_sec) * 1000000 + tv.tv_usec;
-#endif
   return time;
 }
 
 std::vector<float> doBench(Model& model, int loop, int warmup = 10,
-                           int forward = int(ace::DeviceType::X86),
+                           int forward = MNN_FORWARD_CPU,
                            bool only_inference = true, int numberThread = 4,
                            int precision = 2, float sparsity = 0.0f,
                            int sparseBlockOC = 1) {
@@ -107,51 +93,80 @@ std::vector<float> doBench(Model& model, int loop, int warmup = 10,
   revertor->initialize(sparsity, sparseBlockOC);
   auto modelBuffer = revertor->getBuffer();
   const auto bufferSize = revertor->getBufferSize();
-  auto net = std::shared_ptr<ace::Interpreter>(
-      ace::Interpreter::createFromBuffer(modelBuffer, bufferSize));
-  revertor.reset();
-  net->setSessionMode(ace::Interpreter::Session_Release);
-  ace::ScheduleConfig config;
-  config.numThread = numberThread;
-  config.type = static_cast<ace::DeviceType>(forward);
+  // 创建 Interpreter
+  auto net = std::shared_ptr<tars::Interpreter>(
+      tars::Interpreter::createFromBuffer(modelBuffer, bufferSize));
 
-  ace::BackendConfig backendConfig;
-  backendConfig.precision = (ace::BackendConfig::PrecisionMode)precision;
-  backendConfig.power = ace::BackendConfig::Power_High;
+  revertor.reset();
+  // 设置 Session 模式
+  net->setSessionMode(tars::Interpreter::Session_Release);
+  // ScheduleConfig 是一个全局纬度的配置信息
+  tars::ScheduleConfig config;
+  config.numThread = numberThread;
+  config.type = static_cast<MNNForwardType>(forward);
+  // Device Config
+  tars::BackendConfig backendConfig;
+  // 下面的配置都可以删除
+  backendConfig.precision = (tars::BackendConfig::PrecisionMode)precision;
+  backendConfig.power = tars::BackendConfig::Power_High;
   config.backendConfig = &backendConfig;
 
   std::vector<float> costs;
-  ace::Session* session = net->createSession(config);
-  net->releaseModel();
-  ace::Tensor* input = net->getSessionInput(session, NULL);
+  LOG(INFO) << "create the session";
+  tars::Session* session = net->createSession(config);
+  tars::Tensor* input = net->getSessionInput(session, NULL);
 
   // if the model has not the input dimension, umcomment the below code to set
   // the input dims std::vector<int> dims{1, 3, 224, 224};
   // net->resizeTensor(input, dims);
   // net->resizeSession(session);
 
-  const ace::Backend* inBackend = net->getBackend(session, input);
+  LOG(INFO) << "release model";
+  net->releaseModel();
 
-  std::shared_ptr<ace::Tensor> givenTensor(
-      ace::Tensor::createHostTensorFromDevice(input, false));
+  const tars::Device* inBackend = net->getBackend(session, input);
 
+  LOG(INFO) << "create host tensor";
+  std::shared_ptr<tars::Tensor> givenTensor(
+      tars::Tensor::createHostTensorFromDevice(input, false));
+
+  LOG(INFO) << "session output";
   auto outputTensor = net->getSessionOutput(session, NULL);
-  std::shared_ptr<ace::Tensor> expectTensor(
-      ace::Tensor::createHostTensorFromDevice(outputTensor, false));
+
+  LOG(INFO) << "create host tensor";
+  std::shared_ptr<tars::Tensor> expectTensor(
+      tars::Tensor::createHostTensorFromDevice(outputTensor, false));
+
+  LOG(INFO) << "warm up ...";
   // Warming up...
   for (int i = 0; i < warmup; ++i) {
-    input->copyFromHostTensor(givenTensor.get());
+    LOG(INFO) << "warm up " << i << "th iter";
+    void* host =
+        input->map(tars::Tensor::MAP_TENSOR_WRITE, input->getDimensionType());
+    input->unmap(tars::Tensor::MAP_TENSOR_WRITE, input->getDimensionType(),
+                 host);
+
     net->runSession(session);
-    outputTensor->copyToHostTensor(expectTensor.get());
+
+    host = outputTensor->map(tars::Tensor::MAP_TENSOR_READ,
+                             outputTensor->getDimensionType());
+    outputTensor->unmap(tars::Tensor::MAP_TENSOR_READ,
+                        outputTensor->getDimensionType(), host);
   }
 
+  LOG(INFO) << "infer ...";
   for (int round = 0; round < loop; round++) {
+    LOG(INFO) << "infer " << round << "th iter";
     auto timeBegin = getTimeInUs();
-
-    input->copyFromHostTensor(givenTensor.get());
+    void* host =
+        input->map(tars::Tensor::MAP_TENSOR_WRITE, input->getDimensionType());
+    input->unmap(tars::Tensor::MAP_TENSOR_WRITE, input->getDimensionType(),
+                 host);
     net->runSession(session);
-    outputTensor->copyToHostTensor(expectTensor.get());
-
+    host = outputTensor->map(tars::Tensor::MAP_TENSOR_READ,
+                             outputTensor->getDimensionType());
+    outputTensor->unmap(tars::Tensor::MAP_TENSOR_READ,
+                        outputTensor->getDimensionType(), host);
     auto timeEnd = getTimeInUs();
     costs.push_back((timeEnd - timeBegin) / 1000.0);
   }
@@ -170,9 +185,9 @@ void displayStats(const std::string& name, const std::vector<float>& costs) {
   printf("[ - ] %-24s    max = %8.3f ms  min = %8.3f ms  avg = %8.3f ms\n",
          name.c_str(), max, avg == 0 ? 0 : min, avg);
 }
-static inline std::string forwardType(ace::DeviceType type) {
+static inline std::string forwardType(MNNForwardType type) {
   switch (type) {
-    case ace::DeviceType::X86:
+    case MNN_FORWARD_CPU:
       return "CPU";
     default:
       break;
@@ -180,190 +195,15 @@ static inline std::string forwardType(ace::DeviceType type) {
   return "N/A";
 }
 
-#ifdef __ANDROID__
-#include <errno.h>
-#include <sys/prctl.h>
-#include <sys/syscall.h>
-#include <unistd.h>
-
-#define BUFFER_SIZE 1024
-
-static uint32_t getNumberOfCPU() {
-  FILE* fp = fopen("/proc/cpuinfo", "rb");
-  if (!fp) {
-    return 1;
-  }
-  uint32_t number = 0;
-  char buffer[BUFFER_SIZE];
-  while (!feof(fp)) {
-    char* str = fgets(buffer, BUFFER_SIZE, fp);
-    if (!str) {
-      break;
-    }
-    if (memcmp(buffer, "processor", 9) == 0) {
-      number++;
-    }
-  }
-  fclose(fp);
-  if (number < 1) {
-    number = 1;
-  }
-  return number;
-}
-
-static int getCPUMaxFreqKHz(int cpuID) {
-  char path[256];
-  sprintf(path, "/sys/devices/system/cpu/cpufreq/stats/cpu%d/time_in_state",
-          cpuID);
-  FILE* fp = fopen(path, "rb");
-  if (!fp) {
-    sprintf(path, "/sys/devices/system/cpu/cpu%d/cpufreq/stats/time_in_state",
-            cpuID);
-    fp = fopen(path, "rb");
-    if (!fp) {
-      sprintf(path, "/sys/devices/system/cpu/cpu%d/cpufreq/cpuinfo_max_freq",
-              cpuID);
-      fp = fopen(path, "rb");
-      if (!fp) {
-        return -1;
-      }
-      int maxfrequency = -1;
-      fscanf(fp, "%d", &maxfrequency);
-      fclose(fp);
-      return maxfrequency;
-    }
-  }
-  int maxfrequency = 0;
-  while (!feof(fp)) {
-    int frequency = 0;
-    int history = fscanf(fp, "%d %*d", &frequency);
-    if (history != 1) {
-      break;
-    }
-    if (frequency > maxfrequency) {
-      maxfrequency = frequency;
-    }
-  }
-  fclose(fp);
-  return maxfrequency;
-}
-
-static int sortCPUIDByMaxFrequency(std::vector<int>& cpuIDs,
-                                   int* littleClusterOffset) {
-  const int cpuNumbers = cpuIDs.size();
-  *littleClusterOffset = 0;
-  if (cpuNumbers == 0) {
-    return 0;
-  }
-  std::vector<int> cpusFrequency;
-  cpusFrequency.resize(cpuNumbers);
-  for (int i = 0; i < cpuNumbers; ++i) {
-    int frequency = getCPUMaxFreqKHz(i);
-    cpuIDs[i] = i;
-    cpusFrequency[i] = frequency;
-    // MNN_PRINT("cpu fre: %d, %d\n", i, frequency);
-  }
-  for (int i = 0; i < cpuNumbers; ++i) {
-    for (int j = i + 1; j < cpuNumbers; ++j) {
-      if (cpusFrequency[i] < cpusFrequency[j]) {
-        // id
-        int temp = cpuIDs[i];
-        cpuIDs[i] = cpuIDs[j];
-        cpuIDs[j] = temp;
-        // frequency
-        temp = cpusFrequency[i];
-        cpusFrequency[i] = cpusFrequency[j];
-        cpusFrequency[j] = temp;
-      }
-    }
-  }
-  int midMaxFrequency = (cpusFrequency.front() + cpusFrequency.back()) / 2;
-  if (midMaxFrequency == cpusFrequency.back()) {
-    return 0;
-  }
-  for (int i = 0; i < cpuNumbers; ++i) {
-    if (cpusFrequency[i] < midMaxFrequency) {
-      *littleClusterOffset = i;
-      break;
-    }
-  }
-  return 0;
-}
-
-// #define CPU_SETSIZE 1024
-#define __NCPUBITS (8 * sizeof(unsigned long))
-
-#endif
-
-void set_cpu_affinity() {
-#ifdef __ANDROID__
-  int cpu_core_num = sysconf(_SC_NPROCESSORS_CONF);
-  // LOG_MCNN_CL_INF("cpu core num = %d\n", cpu_core_num);
-  int cpu_id = 0;
-  cpu_set_t mask;
-  CPU_ZERO(&mask);
-
-  auto numberOfCPUs = getNumberOfCPU();
-  static std::vector<int> sortedCPUIDs;
-  static int littleClusterOffset = 0;
-  if (sortedCPUIDs.empty()) {
-    sortedCPUIDs.resize(numberOfCPUs);
-    for (int i = 0; i < numberOfCPUs; ++i) {
-      sortedCPUIDs[i] = i;
-    }
-    sortCPUIDByMaxFrequency(sortedCPUIDs, &littleClusterOffset);
-  }
-
-  printf("max core:");
-  for (cpu_id = 0; cpu_id < littleClusterOffset; cpu_id++) {
-    printf("%d ", sortedCPUIDs[cpu_id]);
-    CPU_SET(sortedCPUIDs[cpu_id], &mask);
-  }
-  printf("\n");
-
-  int sys_call_res =
-      syscall(__NR_sched_setaffinity, gettid(), sizeof(mask), &mask);
-  // LOG_MCNN_CL_INF("sys call res = %d\n", sys_call_res);
-  if (sys_call_res) {
-    printf("set_cpu_affinity errno = %d\n", (int)errno);
-  }
-#endif
-}
-
-#if TARGET_OS_IPHONE
-void iosBenchAll(const char* modelPath) {
-  std::cout << "MNN benchmark" << std::endl;
-  int loop = 20;
-  int warmup = 10;
-  DeviceType forward = DeviceType::X86;
-  forward = MNN_FORWARD_NN;
-  int numberThread = 4;
-  int precision = 2;
-  std::cout << "Forward type: **" << forwardType(forward)
-            << "** thread=" << numberThread << "** precision=" << precision
-            << std::endl;
-  std::vector<Model> models = findModelFiles(modelPath);
-  std::cout << "--------> Benchmarking... loop = " << loop
-            << ", warmup = " << warmup << std::endl;
-
-  for (auto& m : models) {
-    std::vector<float> costs =
-        doBench(m, loop, warmup, forward, false, numberThread, precision);
-    displayStats(m.name, costs);
-  }
-}
-#else
-
 int main(int argc, const char* argv[]) {
-  std::cout << "Ace benchmark models" << std::endl;
+  std::cout << "MNN benchmark" << std::endl;
   int loop = 10;
   int warmup = 10;
-  ace::DeviceType forward = ace::DeviceType::X86;
+  MNNForwardType forward = MNN_FORWARD_CPU;
   int numberThread = 4;
   int precision = 2;
   float sparsity = 0.0f;
   int sparseBlockOC = 1;
-
   if (argc <= 2) {
     std::cout << "Usage: " << argv[0]
               << " models_folder [loop_count] [warmup] [forwardtype] "
@@ -378,7 +218,7 @@ int main(int argc, const char* argv[]) {
     warmup = atoi(argv[3]);
   }
   if (argc >= 5) {
-    forward = static_cast<ace::DeviceType>(atoi(argv[4]));
+    forward = static_cast<MNNForwardType>(atoi(argv[4]));
   }
   if (argc >= 6) {
     numberThread = atoi(argv[5]);
@@ -405,19 +245,10 @@ int main(int argc, const char* argv[]) {
   std::cout << "--------> Benchmarking... loop = " << argv[2]
             << ", warmup = " << warmup << std::endl;
 
-  /* not called yet */
-  // set_cpu_affinity();
-
   for (auto& m : models) {
-    Model model;
-    model.name = "MobileNetV2";
-    model.model_file =
-        "/data/lukedong/Ace/benchmark/models/MobileNetV2_224.mnn";
-    std::cout << "model: " << model.name << std::endl;
     std::vector<float> costs =
-        doBench(model, loop, warmup, int(forward), false, numberThread,
-                precision, sparsity, sparseBlockOC);
+        doBench(m, loop, warmup, forward, false, numberThread, precision,
+                sparsity, sparseBlockOC);
     displayStats(m.name, costs);
   }
 }
-#endif

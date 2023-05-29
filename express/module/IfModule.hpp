@@ -9,8 +9,10 @@
 #ifndef IfModule_hpp
 #define IfModule_hpp
 
-#include <ace/expr/Module.hpp>
-namespace ace {
+#include <MNN/expr/Module.hpp>
+
+#include "core/Schedule.hpp"
+namespace tars {
 namespace Express {
 class IfModule : public Module {
  public:
@@ -19,8 +21,8 @@ class IfModule : public Module {
   }
   virtual std::vector<Express::VARP> onForward(
       const std::vector<Express::VARP>& inputs) override;
-  MNN_PUBLIC static IfModule* create(
-      const Op* op, const std::map<std::string, SubGraph>& subGraph);
+  static IfModule* create(const Op* op,
+                          const std::map<std::string, SubGraph>& subGraph);
 
  private:
   IfModule() {}
@@ -40,6 +42,6 @@ class IfModule : public Module {
   std::shared_ptr<Module> mElse;
 };
 }  // namespace Express
-}  // namespace ace
+}  // namespace tars
 
 #endif /* IfModule_hpp */

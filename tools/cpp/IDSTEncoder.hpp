@@ -13,9 +13,9 @@
 #include <map>
 #include <sstream>
 
-#include "ace_generated.h"
+#include "MNN_generated.h"
 
-using namespace ace;
+using namespace tars;
 
 namespace IDSTEncoder {
 

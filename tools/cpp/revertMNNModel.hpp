@@ -9,7 +9,7 @@
 #ifndef REVERTMNNMODEL_HPP
 #define REVERTMNNMODEL_HPP
 
-#include "ace_generated.h"
+#include "MNN_generated.h"
 
 class Revert {
  public:
@@ -17,12 +17,13 @@ class Revert {
   ~Revert();
   void* getBuffer() const;
   const size_t getBufferSize() const;
-  void initialize(float sparsity = 0.0f, int sparseBlockOC = 1);
+  void initialize(float sparsity = 0.0f, int sparseBlockOC = 1,
+                  bool rewrite = false);
   static void fillRandValue(float* data, size_t size);
 
  private:
   Revert();
-  std::unique_ptr<ace::NetT> mMNNNet;
+  std::unique_ptr<tars::NetT> mMNNNet;
   size_t mBufferSize;
   std::shared_ptr<uint8_t> mBuffer;
   void randStart();

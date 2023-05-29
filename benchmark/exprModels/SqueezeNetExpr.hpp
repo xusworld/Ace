@@ -10,8 +10,8 @@
 #ifndef SqueezeNetExpr_hpp
 #define SqueezeNetExpr_hpp
 
-#include <ace/expr/Expr.hpp>
+#include <MNN/expr/Expr.hpp>
 
-ace::Express::VARP squeezeNetExpr(int numClass);
+tars::Express::VARP squeezeNetExpr(int numClass);
 
 #endif  // SqueezeNetExpr_hpp

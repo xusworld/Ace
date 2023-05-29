@@ -10,7 +10,7 @@
 #ifndef ResNetExpr_hpp
 #define ResNetExpr_hpp
 
-#include <ace/expr/Expr.hpp>
+#include <MNN/expr/Expr.hpp>
 #include <map>
 #include <string>
 
@@ -29,6 +29,6 @@ static inline ResNetType EnumResNetTypeByString(const std::string& key) {
   return resNetTypeIter->second;
 }
 
-ace::Express::VARP resNetExpr(ResNetType resNetType, int numClass);
+tars::Express::VARP resNetExpr(ResNetType resNetType, int numClass);
 
 #endif  // ResNetExpr_hpp

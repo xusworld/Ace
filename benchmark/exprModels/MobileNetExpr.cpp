@@ -8,12 +8,12 @@
 //  Copyright © 2018, Alibaba Group Holding Limited
 //
 
-#include <ace/expr/ExprCreator.hpp>
+#include <MNN/expr/ExprCreator.hpp>
 #include <map>
 
 #include "MobileNetExpr.hpp"
 
-using namespace ace::Express;
+using namespace tars::Express;
 
 // When we use MNNConverter to convert other mobilenet model to MNN model,
 // {Conv3x3Depthwise + BN + Relu + Conv1x1 + BN + Relu} will be converted

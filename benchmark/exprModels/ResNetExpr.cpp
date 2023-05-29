@@ -7,13 +7,13 @@
 //  Copyright © 2018, Alibaba Group Holding Limited
 //
 
-#include <ace/expr/ExprCreator.hpp>
+#include <MNN/expr/ExprCreator.hpp>
 #include <map>
 #include <vector>
 
 #include "ResNetExpr.hpp"
 
-using namespace ace::Express;
+using namespace tars::Express;
 
 // When we use MNNConverter to convert other resnet model to MNN model,
 // {Conv + BN + Relu} will be converted and optimized to {Conv}

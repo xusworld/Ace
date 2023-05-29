@@ -7,8 +7,10 @@
 //
 #ifndef WhileModule_hpp
 #define WhileModule_hpp
-#include <ace/expr/Module.hpp>
-namespace ace {
+#include <MNN/expr/Module.hpp>
+
+#include "core/Schedule.hpp"
+namespace tars {
 namespace Express {
 class WhileModule : public Module {
  public:
@@ -17,12 +19,12 @@ class WhileModule : public Module {
   }
   virtual std::vector<Express::VARP> onForward(
       const std::vector<Express::VARP>& inputs) override;
-  MNN_PUBLIC static WhileModule* create(
-      const Op* op, const std::map<std::string, SubGraph>& subGraph);
+  static WhileModule* create(const Op* op,
+                             const std::map<std::string, SubGraph>& subGraph);
 
   struct Info {
-    int mCondInputNumber;
-    int mBodyInputNumber;
+    int mCondInputNumber = 0;
+    int mBodyInputNumber = 0;
     int mOutputNumber;
 
     // First mCondInputs' index, Second: inputs's index
@@ -50,5 +52,5 @@ class WhileModule : public Module {
   std::shared_ptr<Module> mBody;
 };
 }  // namespace Express
-}  // namespace ace
+}  // namespace tars
 #endif

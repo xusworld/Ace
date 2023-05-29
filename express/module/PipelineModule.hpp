@@ -8,14 +8,17 @@
 
 #ifndef PipelineModule_hpp
 #define PipelineModule_hpp
-#include <ace/expr/ExprCreator.hpp>
-#include <ace/expr/Module.hpp>
+#include <MNN/expr/ExprCreator.hpp>
+#include <MNN/expr/Module.hpp>
 
-namespace ace {
+#include "core/AutoStorage.h"
+#include "utils/InitNet.hpp"
+
+namespace tars {
 struct Net;
 }
 
-namespace ace {
+namespace tars {
 namespace Express {
 #define PIPELINE_MODULE "_pipeline_module__"
 
@@ -38,10 +41,12 @@ class PipelineModule : public Module {
   typedef std::function<std::pair<std::vector<int>, std::shared_ptr<Module>>(
       Express::EXPRP)>
       Transformer;
-  MNN_PUBLIC static Module* load(const std::vector<std::string>& inputs,
-                                 const std::vector<std::string>& outputs,
-                                 const uint8_t* buffer, size_t length,
-                                 const Module::Config* config = nullptr);
+  MNN_PUBLIC static Module* load(
+      const std::vector<std::string>& inputs,
+      const std::vector<std::string>& outputs, const uint8_t* buffer,
+      size_t length,
+      std::shared_ptr<tars::Express::Executor::RuntimeManager> rtMgr,
+      const Module::Config* config = nullptr);
   virtual std::vector<Express::VARP> onForward(
       const std::vector<Express::VARP>& inputs) override;
   virtual void onClearCache() override;
@@ -53,14 +58,18 @@ class PipelineModule : public Module {
                             const Transformer& transformFunction = {});
 
  private:
-  static Module* load(const std::vector<std::string>& inputs,
-                      const std::vector<std::string>& outputs,
-                      const uint8_t* buffer, size_t length,
-                      const Module::Config* config,
-                      std::map<std::string, SubGraph>& subGraphMap,
-                      bool inRecurce = false);
-  static void _createSubGraph(const ace::Net* net, const Module::Config* config,
-                              std::map<std::string, SubGraph>& subGraphMap);
+  static Module* load(
+      const std::vector<std::string>& inputs,
+      const std::vector<std::string>& outputs,
+      std::shared_ptr<BufferStorage> bufferStorage,
+      const std::shared_ptr<tars::Express::Executor::RuntimeManager> rtMgr,
+      const Module::Config* config,
+      std::map<std::string, SubGraph>& subGraphMap);
+  static void _createSubGraph(
+      const tars::Net* net,
+      std::shared_ptr<tars::Express::Executor::RuntimeManager> rtMgr,
+      const Module::Config* config,
+      std::map<std::string, SubGraph>& subGraphMap);
 
   PipelineModule() {}
 
@@ -69,13 +78,14 @@ class PipelineModule : public Module {
   std::vector<
       std::tuple<std::shared_ptr<Module>, std::vector<int>, std::vector<int>>>
       mSubModules;
-  std::vector<int> mInputIndexes;
-  std::vector<int> mOutputIndexes;
-  std::vector<int> mInputFormats;
   int mStackSize = 0;
+  int mInputSize = 0;
+  std::vector<int> mOutputIndex;
   friend class NN;
+  std::vector<VARP> mInitVars;
+  std::shared_ptr<Schedule::ScheduleInfo> mSharedConst;
 };
 }  // namespace Express
-}  // namespace ace
+}  // namespace tars
 
 #endif

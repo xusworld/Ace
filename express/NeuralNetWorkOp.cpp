@@ -6,17 +6,18 @@
 //  Copyright © 2018, Alibaba Group Holding Limited
 //
 
-#include <ace/MNNDefine.h>
+#include <MNN/MNNDefine.h>
 
-#include <ace/expr/ExprCreator.hpp>
+#include <MNN/expr/ExprCreator.hpp>
 #include <algorithm>
 #include <cmath>
 #include <map>
 #include <numeric>
 
+#include "MNN/expr/ExecutorScope.hpp"
+#include "MNN_generated.h"
 #include "Utils.hpp"
-#include "ace_generated.h"
-namespace ace {
+namespace tars {
 namespace Express {
 static PadMode _convertPadMode(PaddingMode mode) {
   switch (mode) {
@@ -399,7 +400,7 @@ VARP _Reshape(VARP x, INTS shape, Dimensionformat original_format) {
   reshape->main.value = new ReshapeT;
   reshape->main.AsReshape()->dims = shape;
   reshape->main.AsReshape()->dimType =
-      (DATA_FORMAT)Utils::convertFormat(original_format);
+      (MNN_DATA_FORMAT)Utils::convertFormat(original_format);
   return (Variable::create(Expr::create(reshape.get(), {x})));
 }
 /*Reshapes a variable.
@@ -417,9 +418,9 @@ VARP _Reshape(VARP x, VARP shape) {
   reshape->main.value = new ReshapeT;
   if (nullptr != x->getInfo()) {
     reshape->main.AsReshape()->dimType =
-        (DATA_FORMAT)Utils::convertFormat(x->getInfo()->order);
+        (MNN_DATA_FORMAT)Utils::convertFormat(x->getInfo()->order);
   } else {
-    reshape->main.AsReshape()->dimType = DATA_FORMAT_NHWC;
+    reshape->main.AsReshape()->dimType = MNN_DATA_FORMAT_NHWC;
   }
   return (Variable::create(Expr::create(reshape.get(), {x, shape})));
 }
@@ -546,7 +547,7 @@ VARP _Convert(VARP input, Dimensionformat format) {
   convert->main.type = OpParameter_TensorConvertInfo;
   convert->main.value = new TensorConvertInfoT;
   convert->main.AsTensorConvertInfo()->dest =
-      (DATA_FORMAT)Utils::convertFormat(format);
+      (MNN_DATA_FORMAT)Utils::convertFormat(format);
   return (Variable::create(Expr::create(convert.get(), {input})));
 }
 /*Splits a variable value into a list of sub variables.
@@ -564,7 +565,7 @@ std::vector<VARP> _Split(VARP value, INTS size_splits, int axis) {
   op->main.type = OpParameter_Slice;
   op->main.value = new SliceT;
   op->main.AsSlice()->axis = axis;
-  op->main.AsSlice()->sourceType = FrontendFramework_TENSORFLOW;
+  op->main.AsSlice()->sourceType = NetSource_TENSORFLOW;
   op->main.AsSlice()->slicePoints = size_splits;
 
   int slices =
@@ -599,6 +600,25 @@ VARP _StridedSlice(VARP input, VARP begin, VARP end, VARP strided,
   op->main.AsStridedSliceParam()->shrinkAxisMask = shrinkAxisMask;
   return (
       Variable::create(Expr::create(op.get(), {input, begin, end, strided})));
+}
+
+VARP _StridedSliceWrite(VARP input, VARP begin, VARP end, VARP strided,
+                        VARP write, int32_t beginMask, int32_t endMask,
+                        int32_t ellipsisMask, int32_t newAxisMask,
+                        int32_t shrinkAxisMask) {
+  std::unique_ptr<OpT> op(new OpT);
+  op->type = OpType_StridedSlice;
+  op->main.type = OpParameter_StridedSliceParam;
+  op->main.value = new StridedSliceParamT;
+
+  op->main.AsStridedSliceParam()->T = DataType_DT_FLOAT;
+  op->main.AsStridedSliceParam()->beginMask = beginMask;
+  op->main.AsStridedSliceParam()->endMask = endMask;
+  op->main.AsStridedSliceParam()->ellipsisMask = ellipsisMask;
+  op->main.AsStridedSliceParam()->newAxisMask = newAxisMask;
+  op->main.AsStridedSliceParam()->shrinkAxisMask = shrinkAxisMask;
+  return (Variable::create(
+      Expr::create(op.get(), {input, begin, end, strided, write})));
 }
 /*Transposes x.
 Args:
@@ -790,16 +810,16 @@ VARP _Pad(VARP x, VARP paddings, PadValueMode mode) {
   pad->main.value = new PadParamT;
   switch (mode) {
     case CONSTANT:
-      pad->main.AsPadParam()->mode = ace::PadValueMode_CONSTANT;
+      pad->main.AsPadParam()->mode = tars::PadValueMode_CONSTANT;
       break;
     case SYMMETRIC:
-      pad->main.AsPadParam()->mode = ace::PadValueMode_SYMMETRIC;
+      pad->main.AsPadParam()->mode = tars::PadValueMode_SYMMETRIC;
       break;
     case REFLECT:
-      pad->main.AsPadParam()->mode = ace::PadValueMode_REFLECT;
+      pad->main.AsPadParam()->mode = tars::PadValueMode_REFLECT;
       break;
     default:
-      pad->main.AsPadParam()->mode = ace::PadValueMode_CONSTANT;
+      pad->main.AsPadParam()->mode = tars::PadValueMode_CONSTANT;
       break;
   }
   return (Variable::create(Expr::create(std::move(pad), {x, paddings})));
@@ -837,7 +857,7 @@ VARP _Shape(VARP input, bool nchw) {
   std::unique_ptr<OpT> shape(new OpT);
   shape->type = OpType_Shape;
   if (nchw) {
-    shape->defaultDimentionFormat = DATA_FORMAT_NCHW;
+    shape->defaultDimentionFormat = MNN_DATA_FORMAT_NCHW;
   }
   return (Variable::create(Expr::create(std::move(shape), {input})));
 }
@@ -1058,6 +1078,19 @@ VARP _GatherND(VARP params, VARP indices) {
   return (Variable::create(Expr::create(std::move(op), {params, indices})));
 }
 
+VARP _GatherElements(VARP params, VARP indices) {
+  std::unique_ptr<OpT> op(new OpT);
+  op->type = OpType_GatherElements;
+  return (Variable::create(Expr::create(std::move(op), {params, indices})));
+}
+
+VARP _GatherElements(VARP params, VARP indices, VARP axis) {
+  std::unique_ptr<OpT> op(new OpT);
+  op->type = OpType_GatherElements;
+  return (
+      Variable::create(Expr::create(std::move(op), {params, indices, axis})));
+}
+
 /*BatchToSpace for N-D variables
 This operation reshapes the "batch" dimension 0 into M + 1 dimensions of shape
 block_shape + [batch], interleaves these blocks back into the grid defined by
@@ -1107,18 +1140,18 @@ VARP _BatchToSpaceND(VARP input, VARP block_shape, VARP crops) {
 
   blob_blockShape->dims = info_block_shape->dim;
   blob_blockShape->dataFormat =
-      (DATA_FORMAT)Utils::convertFormat(info_block_shape->order);
+      (MNN_DATA_FORMAT)Utils::convertFormat(info_block_shape->order);
   blob_blockShape->dataType =
-      (ace::DataType)Utils::convertDataType(info_block_shape->type);
+      (tars::DataType)Utils::convertDataType(info_block_shape->type);
   auto data_block_shape = block_shape->readMap<int>();
   for (int i = 0; i < info_block_shape->size; i++) {
     blob_blockShape->int32s.emplace_back(data_block_shape[i]);
   }
   blob_paddings->dims = info_crops->dim;
   blob_paddings->dataFormat =
-      (DATA_FORMAT)Utils::convertFormat(info_crops->order);
+      (MNN_DATA_FORMAT)Utils::convertFormat(info_crops->order);
   blob_paddings->dataType =
-      (ace::DataType)Utils::convertDataType(info_crops->type);
+      (tars::DataType)Utils::convertDataType(info_crops->type);
   auto data_crop = crops->readMap<int>();
   for (int i = 0; i < info_crops->size; i++) {
     blob_paddings->int32s.emplace_back(data_crop[i]);
@@ -1242,18 +1275,18 @@ VARP _SpaceToBatchND(VARP input, VARP block_shape, VARP paddings) {
 
   blob_blockShape->dims = info_block_shape->dim;
   blob_blockShape->dataFormat =
-      (ace::DATA_FORMAT)Utils::convertFormat(info_block_shape->order);
+      (tars::MNN_DATA_FORMAT)Utils::convertFormat(info_block_shape->order);
   blob_blockShape->dataType =
-      (ace::DataType)Utils::convertDataType(info_block_shape->type);
+      (tars::DataType)Utils::convertDataType(info_block_shape->type);
   auto data_block_shape = block_shape->readMap<int>();
   for (int i = 0; i < info_block_shape->size; i++) {
     blob_blockShape->int32s.emplace_back(data_block_shape[i]);
   }
   blob_paddings->dims = info_paddings->dim;
   blob_paddings->dataFormat =
-      (ace::DATA_FORMAT)Utils::convertFormat(info_paddings->order);
+      (tars::MNN_DATA_FORMAT)Utils::convertFormat(info_paddings->order);
   blob_paddings->dataType =
-      (ace::DataType)Utils::convertDataType(info_paddings->type);
+      (tars::DataType)Utils::convertDataType(info_paddings->type);
   auto data_paddings = paddings->readMap<int>();
   for (int i = 0; i < info_paddings->size; i++) {
     blob_paddings->int32s.emplace_back(data_paddings[i]);
@@ -1341,7 +1374,7 @@ VARP _Range(VARP start, VARP limit, VARP delta) {
   op->type = OpType_Range;
   auto rangeParam = new RangeT;
   rangeParam->Tidx =
-      (ace::DataType)Utils::convertDataType(start->getInfo()->type);
+      (tars::DataType)Utils::convertDataType(start->getInfo()->type);
   op->main.type = OpParameter_Range;
   op->main.value = rangeParam;
   return Variable::create(Expr::create(std::move(op), {start, limit, delta}));
@@ -1513,6 +1546,12 @@ VARP _Interp(VARPS xs, float widthScale, float heightScale, int outputWidth,
   param->outputHeight = outputHeight;
   param->resizeType = resizeType;
   param->alignCorners = alignCorners;
+  if ((resizeType == 2 || resizeType == 3) && alignCorners) {
+    param->ctm = tars::CoordinateTransformationMode_AlignCorners;
+  }
+  if ((resizeType == 2 || resizeType == 3) && !alignCorners) {
+    param->ctm = tars::CoordinateTransformationMode_PytorchHalfPixels;
+  }
   interp->main.value = param;
   interp->main.type = OpParameter_Interp;
   return Variable::create(Expr::create(std::move(interp), xs));
@@ -1594,7 +1633,7 @@ VARP _Conv(std::vector<int8_t>&& weight, std::vector<int>&& bias,
   conv2D->common->kernelX = kernelSize[0];
   conv2D->common->kernelY = kernelSize[1];
   conv2D->common->relu = relu;
-  MNN_ASSERT(weight.size() ==
+  MNN_ASSERT(weight.size() >=
              channel[1] * (channel[0] / group) * kernelSize[0] * kernelSize[1]);
   conv2D->symmetricQuan.reset(new QuantizedFloatParamT);
   if (bias.size() == 0) {
@@ -1612,7 +1651,7 @@ VARP _Conv(std::vector<int8_t>&& weight, std::vector<int>&& bias,
 
   if (accumulateToInt16) {
     conv2D->symmetricQuan->method =
-        ace::QuantizeAlgo::QuantizeAlgo_OVERFLOW_AWARE;
+        tars::QuantizeAlgo::QuantizeAlgo_OVERFLOW_AWARE;
   }
 
   return (Variable::create(Expr::create(convOp.get(), {x})));
@@ -1687,15 +1726,15 @@ VARP _Conv(std::vector<int8_t>&& weight, std::vector<float>&& bias,
 
   if (accumulateToInt16) {
     conv2D->symmetricQuan->method =
-        ace::QuantizeAlgo::QuantizeAlgo_OVERFLOW_AWARE;
+        tars::QuantizeAlgo::QuantizeAlgo_OVERFLOW_AWARE;
   }
 
   return (Variable::create(Expr::create(convOp.get(), {x})));
 }
 
 VARP _CosineSimilarity(VARP input0, VARP input1, VARP inputDim) {
-  std::unique_ptr<ace::OpT> cosineSimilarityOp(new ace::OpT);
-  cosineSimilarityOp->type = ace::OpType_CosineSimilarity;
+  std::unique_ptr<tars::OpT> cosineSimilarityOp(new tars::OpT);
+  cosineSimilarityOp->type = tars::OpType_CosineSimilarity;
   return (Variable::create(
       Expr::create(std::move(cosineSimilarityOp), {input0, input1, inputDim})));
 }
@@ -1853,8 +1892,8 @@ VARP _Int8ToFloat(VARP x, VARP scale, int8_t zeroPoint) {
 }
 
 VARP _Select(VARP select, VARP input0, VARP input1) {
-  std::unique_ptr<ace::OpT> selectOp(new ace::OpT);
-  selectOp->type = ace::OpType_Select;
+  std::unique_ptr<tars::OpT> selectOp(new tars::OpT);
+  selectOp->type = tars::OpType_Select;
   return (Variable::create(
       Expr::create(std::move(selectOp), {select, input0, input1})));
 }
@@ -1869,5 +1908,158 @@ std::vector<VARP> _TopKV2(VARP input0, VARP input1) {
   return res;
 }
 
+VARP _ImageProcess(VARP input, CV::ImageProcess::Config config,
+                   CV::Matrix matrix, int oh, int ow, int oc, int dtype,
+                   uint8_t padVal) {
+  std::unique_ptr<tars::OpT> op(new tars::OpT);
+  op->type = tars::OpType_ImageProcess;
+  op->main.type = OpParameter_ImageProcessParam;
+  auto process = new ImageProcessParamT;
+  op->main.value = process;
+  process->destFormat = (tars::ImageFormatType)config.destFormat;
+  process->sourceFormat = (tars::ImageFormatType)config.sourceFormat;
+  process->filterType = (tars::FilterType)config.filterType;
+  process->wrap = (tars::WrapType)config.wrap;
+  process->shape = {1, oc, oh, ow};
+  process->outputType = (DataType)dtype;
+  process->paddingValue = padVal;
+  process->mean.resize(4);
+  process->normal.resize(4);
+  process->transform.resize(9);
+  for (int i = 0; i < 4; i++) {
+    process->mean[i] = config.mean[i];
+    process->normal[i] = config.normal[i];
+  }
+  for (int i = 0; i < 9; i++) {
+    process->transform[i] = matrix.get(i);
+  }
+  return (Variable::create(Expr::create(std::move(op), {input})));
+}
+
+VARP _Where(VARP x) {
+  std::unique_ptr<tars::OpT> op(new tars::OpT);
+  op->type = tars::OpType_Where;
+  op->main.type = OpParameter_Extra;
+  op->main.value = new ExtraT;
+  return (Variable::create(Expr::create(std::move(op), {x})));
+}
+
+VARP _Sort(VARP x, int axis, bool arg, bool descend) {
+  std::unique_ptr<OpT> op(new OpT);
+  op->type = OpType_TopKV2;
+  op->main.type = OpParameter_TopKV2;
+  auto topk = new TopKV2T;
+  topk->largest = descend;
+  op->main.value = topk;
+  auto shape = x->getInfo()->dim;
+  axis = axis < 0 ? shape.size() + axis : axis;
+  int k = x->getInfo()->dim[axis];
+  std::vector<VARP> inputs{x, _Scalar(k)};
+  if (axis + 1 != shape.size()) {
+    inputs.push_back(_Scalar(axis));
+  }
+  auto expr = Expr::create(op.get(), inputs, 2);
+  return Variable::create(expr, arg);
+}
+
+VARP _Raster(const std::vector<VARP>& vars, const std::vector<int>& region,
+             const std::vector<int>& shape) {
+  auto expr = Utils::makeRaster(vars, region, shape, halide_type_of<float>(),
+                                MNN_DATA_FORMAT_UNKNOWN);
+  return (Variable::create(expr));
+}
+VARP _RasterRaw(const std::vector<VARP>& vars, const std::vector<int>& region,
+                const std::vector<int>& shape, halide_type_t dataType,
+                Dimensionformat eformat) {
+  auto format = Utils::convertFormat(eformat);
+  auto expr =
+      Utils::makeRaster(vars, region, shape, dataType, (MNN_DATA_FORMAT)format);
+  return (Variable::create(expr));
+}
+
+VARP _Nms(VARP boxes, VARP scores, int maxDetections, float iouThreshold,
+          float scoreThreshold) {
+  std::unique_ptr<tars::OpT> op(new tars::OpT);
+  op->type = OpType_NonMaxSuppressionV2;
+  std::vector<VARP> vars{boxes, scores, _Scalar(maxDetections)};
+  if (iouThreshold >= 0) {
+    vars.push_back(_Scalar(iouThreshold));
+  }
+  if (scoreThreshold >= 0) {
+    vars.push_back(_Scalar(scoreThreshold));
+  }
+  return (Variable::create(Expr::create(std::move(op), vars)));
+}
+
+VARP _Im2Col(VARP x, INTS kernelSize, INTS dilate, INTS pads, INTS stride) {
+  std::unique_ptr<tars::OpT> op(new tars::OpT);
+  op->type = tars::OpType_Im2Col;
+  op->main.type = OpParameter_Convolution2D;
+  auto param = new tars::Convolution2DT;
+  auto common = new Convolution2DCommonT;
+  param->common.reset(common);
+  op->main.value = param;
+  common->padX = pads[0];
+  common->padY = pads[1];
+  common->strideX = stride[0];
+  common->strideY = stride[1];
+  common->dilateX = dilate[0];
+  common->dilateY = dilate[1];
+  common->kernelX = kernelSize[0];
+  common->kernelY = kernelSize[1];
+  return (Variable::create(Expr::create(op.get(), {x})));
+}
+
+VARP _Col2Im(VARP x, VARP outputShape, INTS kernelSize, INTS dilate, INTS pads,
+             INTS stride) {
+  std::unique_ptr<tars::OpT> op(new tars::OpT);
+  op->type = tars::OpType_Col2Im;
+  op->main.type = OpParameter_Convolution2D;
+  auto param = new tars::Convolution2DT;
+  auto common = new Convolution2DCommonT;
+  param->common.reset(common);
+  op->main.value = param;
+  common->padX = pads[0];
+  common->padY = pads[1];
+  common->strideX = stride[0];
+  common->strideY = stride[1];
+  common->dilateX = dilate[0];
+  common->dilateY = dilate[1];
+  common->kernelX = kernelSize[0];
+  common->kernelY = kernelSize[1];
+  return (Variable::create(Expr::create(op.get(), {x, outputShape})));
+}
+
+VARPS _Loop(VARPS x, const std::string& submoduleName) {
+  auto subgraph = ExecutorScope::Current()->findSubGraph(submoduleName);
+  if (nullptr == subgraph) {
+    MNN_ERROR("Loop Error: Can't find submoduleName: %s\n",
+              submoduleName.c_str());
+    return VARPS{};
+  }
+  auto info = subgraph->info.get();
+  if (info->inputs.size() != x.size()) {
+    MNN_ERROR("Loop Error: input number not match: x: %d : submodule: %d\n",
+              (int)x.size(), (int)info->inputs.size());
+    return VARPS{};
+  }
+  std::unique_ptr<tars::OpT> op(new tars::OpT);
+  op->type = tars::OpType_While;
+  op->main.type = OpParameter_WhileParam;
+  auto param = new tars::WhileParamT;
+  op->main.value = param;
+  param->body_graph = submoduleName;
+  // Body Input: 2 + N, Body Output: 1 + N + K, Op output: N + K
+  int N = (int)info->inputs.size() - 2;
+  int K = (int)info->outputs.size() - N - 1;
+  MNN_ASSERT(info->inputs.size() >= 2);
+  EXPRP expr = Expr::create(op.get(), x, N + K);
+  VARPS outputs(N + K);
+  for (int i = 0; i < N + K; ++i) {
+    outputs[i] = Variable::create(expr, i);
+  }
+  return outputs;
+}
+
 }  // namespace Express
-}  // namespace ace
+}  // namespace tars

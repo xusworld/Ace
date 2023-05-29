@@ -6,11 +6,11 @@
 //  Copyright © 2018, Alibaba Group Holding Limited
 //
 
-#include <ace/tensor.h>
-
 #include <memory>
 #include <string>
 #include <vector>
+
+#include "core/tensor.h"
 
 enum GET_THRESHOLD_METHOD {
   THRESHOLD_MAX = 0,
@@ -19,7 +19,7 @@ enum GET_THRESHOLD_METHOD {
 
 class TensorStatistic {
  public:
-  TensorStatistic(const ace::Tensor* tensor, std::string method,
+  TensorStatistic(const tars::Tensor* tensor, std::string method,
                   const std::string& name, float featureClampValue,
                   int binNumber = 2048,
                   GET_THRESHOLD_METHOD thresholdMethod = THRESHOLD_KL);
@@ -60,9 +60,9 @@ class TensorStatistic {
   // [c * mBinNumber]: store every channel's distribution using bin
   std::vector<float> mDistribution;
 
-  std::shared_ptr<ace::Tensor> mHostTensor;
+  std::shared_ptr<tars::Tensor> mHostTensor;
   // the Tensor
-  const ace::Tensor* mOriginTensor;
+  const tars::Tensor* mOriginTensor;
   // bin number for distribution
   int mBinNumber;
   // has update or not, assert update once

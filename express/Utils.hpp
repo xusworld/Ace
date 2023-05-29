@@ -8,23 +8,15 @@
 
 #ifndef Utils_hpp
 #define Utils_hpp
-#include <ace/tensor.h>
+#include <MNN/expr/Executor.hpp>
+#include <MNN/expr/Expr.hpp>
 
-#include <ace/expr/Executor.hpp>
-#include <ace/expr/Expr.hpp>
-
+#include "MNN_generated.h"
 #include "Type_generated.h"
-#include "ace_generated.h"
-namespace ace {
+#include "core/AutoStorage.h"
+namespace tars {
+class Session;
 namespace Express {
-struct BufferStorage {
-  size_t size() const { return allocated_size - offset; }
-
-  const uint8_t* buffer() const { return storage.get() + offset; }
-  size_t allocated_size;
-  size_t offset;
-  std::unique_ptr<uint8_t> storage;
-};
 struct Expr::Inside {
   Inside(int outputSize);
   Inside(Tensor* tensor, bool own = false);
@@ -32,13 +24,50 @@ struct Expr::Inside {
   std::vector<Variable::Info> mOutputInfos;
   std::vector<Tensor*> mOutputTensors;
   Executor::Requirement mReq;
-  std::shared_ptr<Executor::Unit> mUnit;
   std::shared_ptr<Executor::ComputeCache> mCache;
   int mCacheOffset = 0;
   bool mInfoDirty = true;
   bool mContentDirty = true;
   bool mOwnTensor = true;
   Tensor* mHostTensor = nullptr;
+  std::shared_ptr<Device> mHoldBackend;
+};
+struct Executor::DebugTools {
+  TensorCallBackWithInfo before = nullptr;
+  TensorCallBackWithInfo after = nullptr;
+  mutable float flops = 0.0f;
+};
+struct Executor::SubGraph {
+  std::unique_ptr<tars::SubGraphProtoT> info;
+  std::vector<std::string> depends;
+};
+class Executor::ComputeCache {
+ public:
+  void setShapeDirty();
+  void setContentDirty();
+  void* mapOutput(int offset, Tensor* dest);
+
+  ~ComputeCache();
+  ComputeCache() {
+    // Do nothing
+  }
+
+  ErrorCode compute();
+  ErrorCode resize();
+  ErrorCode resizeImpl();
+  Session* getSession() { return mSession.get(); }
+  friend class Executor;
+
+ private:
+  std::set<std::shared_ptr<Expr::Inside>> mInputInside;
+  std::set<std::shared_ptr<ComputeCache>> mInputs;
+  std::shared_ptr<Session> mSession;
+  bool mContentDirty = true;
+  bool mShapeDirty = true;
+  std::vector<std::shared_ptr<BufferStorage>> mCacheBuffers;
+#ifdef MNN_EXPRESS_MEMLEAK_DEBUG
+  static int gInstanceCount;
+#endif
 };
 class Utils {
  public:
@@ -50,8 +79,13 @@ class Utils {
   static halide_type_t revertDataType(DataType dataType);
   static bool allocMemoryForHostTensor(Tensor* dest);
   static bool releaseMemoryForHostTensor(Tensor* dest);
+  static Tensor* getTensor(VARP var);
+  static EXPRP makeRaster(const std::vector<VARP>& vars,
+                          const std::vector<int>& regions,
+                          const std::vector<int>& shape, halide_type_t dataType,
+                          MNN_DATA_FORMAT format);
 };
 
 }  // namespace Express
-}  // namespace ace
+}  // namespace tars
 #endif

@@ -11,7 +11,7 @@
 #ifndef MobileNetExpr_hpp
 #define MobileNetExpr_hpp
 
-#include <ace/expr/Expr.hpp>
+#include <MNN/expr/Expr.hpp>
 #include <map>
 #include <string>
 
@@ -57,8 +57,8 @@ static inline MobileNetResolutionType EnumMobileNetResolutionTypeByString(
   return mobileNetResolutionTypeIter->second;
 }
 
-ace::Express::VARP mobileNetV1Expr(MobileNetWidthType alpha,
-                                   MobileNetResolutionType beta, int numClass);
-ace::Express::VARP mobileNetV2Expr(int numClass);
+tars::Express::VARP mobileNetV1Expr(MobileNetWidthType alpha,
+                                    MobileNetResolutionType beta, int numClass);
+tars::Express::VARP mobileNetV2Expr(int numClass);
 
 #endif  // MobileNetExpr_hpp

@@ -7,11 +7,11 @@
 //  Copyright © 2018, Alibaba Group Holding Limited
 //
 
-#include <ace/expr/ExprCreator.hpp>
+#include <MNN/expr/ExprCreator.hpp>
 
 #include "GoogLeNetExpr.hpp"
 
-using namespace ace::Express;
+using namespace tars::Express;
 
 // inception module, channels: [inputChannel, 1x1, 3x3_reduce, 3x3, 5x5_reduce,
 // 5x5, pool_proj]

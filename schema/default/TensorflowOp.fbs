@@ -1,5 +1,5 @@
 include "Tensor.fbs";
-namespace ace;
+namespace tars;
 
 enum BinaryOpOperation : byte {
     ADD = 0,
@@ -24,11 +24,20 @@ enum BinaryOpOperation : byte {
     ATAN2 = 20,
     LOGICALOR = 21,
     NOTEQUAL = 22,
+    BITWISE_AND = 23,
+    BITWISE_OR = 24,
+    BITWISE_XOR = 25,
+    LOGICALXOR = 26,
+    LEFTSHIFT = 27,
+    RIGHTSHIFT = 28,
 }
 
 table BinaryOp {
     opType:int;
     T:DataType=DT_FLOAT;
+    // 0 -> No Activation
+    // 1 -> Relu
+    activationType:int=0;
 }
 
 table PackParam {
@@ -141,6 +150,7 @@ enum UnaryOpOperation : int {
     TANH = 30,
     HARDSWISH = 31,
     GELU = 32,
+    GELU_STANDARD = 33,
 }
 
 table UnaryOp {
@@ -151,6 +161,7 @@ table UnaryOp {
 table TopKV2 {
     T:DataType=DT_FLOAT;
     sorted:bool=false;
+    largest:bool=true;
 }
 enum CropAndResizeMethod : byte{
     BILINEAR=0,
@@ -284,7 +295,8 @@ table OneHotParam{
 enum PadValueMode : byte{
     CONSTANT = 0,
     REFLECT = 1,
-    SYMMETRIC = 2
+    SYMMETRIC = 2,
+    EDGE=3,
 }
 
 table PadParam{
@@ -295,6 +307,8 @@ table LayerNorm {
     epsilon: float;
     gamma: [float];
     beta: [float];
+    group: int = 1;
+    external:[int64]; // [offset, gamma_bytes_size, beta_bytes_size]
 }
 table RandomUniform {
     seed:int = 0;
@@ -310,6 +324,10 @@ table TensorArray {
     identical_element_shapes:bool = false;
     element_shape:[int];
     T:DataType = DT_FLOAT;
+    // onnx related attributes
+    axis:int = 0;
+    keepdims:bool = true;
+    new_axis:bool = false;
 }
 
 table LSTMBlockCell {

@@ -30,11 +30,11 @@ std::set<std::string> Helper::gNotNeedFeatureOp = {
     "Interp",   "CropAndResize", "ROIPooling", "Gather",
     "GatherV2", "GatherND",      "ScatterNd"};
 
-std::set<ace::OpType> Helper::INT8SUPPORTED_OPS = {
-    ace::OpType_ConvInt8, ace::OpType_DepthwiseConvInt8, ace::OpType_PoolInt8,
-    ace::OpType_EltwiseInt8,
-    // ace::OpType_Int8ToFloat,
-    // ace::OpType_FloatToInt8,
+std::set<tars::OpType> Helper::INT8SUPPORTED_OPS = {
+    tars::OpType_ConvInt8, tars::OpType_DepthwiseConvInt8,
+    tars::OpType_PoolInt8, tars::OpType_EltwiseInt8,
+    // tars::OpType_Int8ToFloat,
+    // tars::OpType_FloatToInt8,
 };
 
 std::set<std::string> Helper::featureQuantizeMethod = {"EMA", "KL", "ADMM"};
@@ -54,13 +54,17 @@ void Helper::readClibrationFiles(std::vector<std::string>& images,
 #if defined(_MSC_VER)
   WIN32_FIND_DATA ffd;
   HANDLE hFind = INVALID_HANDLE_VALUE;
-  hFind = FindFirstFile(filePath.c_str(), &ffd);
+  hFind = FindFirstFile((filePath + "\\*").c_str(), &ffd);
   if (INVALID_HANDLE_VALUE == hFind) {
     std::cout << "open " << filePath << " failed: " << strerror(errno)
               << std::endl;
     return;
   }
-  do {
+
+  while (FindNextFile(hFind, &ffd)) {
+    if (ffd.cFileName[0] == '.') {
+      continue;
+    }
     const std::string fileName = filePath + "\\" + ffd.cFileName;
     if (INVALID_FILE_ATTRIBUTES != GetFileAttributes(fileName.c_str()) &&
         GetLastError() != ERROR_FILE_NOT_FOUND) {
@@ -76,7 +80,8 @@ void Helper::readClibrationFiles(std::vector<std::string>& images,
         break;
       }
     }
-  } while (FindNextFile(hFind, &ffd) != 0);
+  }
+
   FindClose(hFind);
 #else
   DIR* root = opendir(filePath.c_str());
@@ -107,15 +112,14 @@ void Helper::readClibrationFiles(std::vector<std::string>& images,
     ent = readdir(root);
   }
 #endif
-  if (*usedImageNum == 0) {
-    *usedImageNum = count;
-  }
+
+  *usedImageNum = images.size();
   DLOG(INFO) << "used image num: " << images.size();
 }
 
-void Helper::preprocessInput(ace::CV::ImageProcess* pretreat,
+void Helper::preprocessInput(tars::CV::ImageProcess* pretreat,
                              PreprocessConfig preprocessConfig,
-                             const std::string& filename, ace::Tensor* input,
+                             const std::string& filename, tars::Tensor* input,
                              InputType inputType) {
   if (inputType == InputType::IMAGE) {
     int originalWidth, originalHeight, comp;
@@ -146,9 +150,9 @@ void Helper::preprocessInput(ace::CV::ImageProcess* pretreat,
         0.0f,          0.0f, 0.0f,          float(oh - 1),
         float(ow - 1), 0.0f, float(ow - 1), float(oh - 1),
     };
-    ace::CV::Matrix trans;
-    trans.setPolyToPoly((ace::CV::Point*)dstPoints, (ace::CV::Point*)srcPoints,
-                        4);
+    tars::CV::Matrix trans;
+    trans.setPolyToPoly((tars::CV::Point*)dstPoints,
+                        (tars::CV::Point*)srcPoints, 4);
 
     pretreat->setMatrix(trans);
     pretreat->convert(bitmap32bits, originalWidth, originalHeight, 0, input);
@@ -198,8 +202,8 @@ void Helper::preprocessInput(ace::CV::ImageProcess* pretreat,
     }
 
     std::vector<int> shape = {1, int(rawData.size()), int(rawData[0].size())};
-    std::shared_ptr<ace::Tensor> tensorWarp(ace::Tensor::create(
-        shape, input->getType(), data.data(), ace::Tensor::CAFFE));
+    std::shared_ptr<tars::Tensor> tensorWarp(tars::Tensor::create(
+        shape, input->getType(), data.data(), tars::Tensor::CAFFE));
     input->copyFromHostTensor(tensorWarp.get());
   }
 }

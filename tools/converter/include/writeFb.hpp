@@ -9,11 +9,11 @@
 #ifndef WRITEFB_HPP
 #define WRITEFB_HPP
 
-#include <ace/MNNDefine.h>
+#include <MNN/MNNDefine.h>
 
 #include <map>
 
-#include "ace_generated.h"
+#include "MNN_generated.h"
 #include "config.hpp"
 
 /**
@@ -24,10 +24,8 @@
  *@param saveHalfFloat when saveHalfFloat is true, save weight in half float
  *data type
  */
-MNN_PUBLIC int writeFb(std::unique_ptr<ace::NetT>& netT,
+MNN_PUBLIC int writeFb(std::unique_ptr<tars::NetT>& netT,
                        const std::string& MNNModelFile,
                        const modelConfig& config);
-MNN_PUBLIC void converToStaticModel(
-    const ace::Net* net, std::map<std::string, std::vector<int>>& inputConfig,
-    std::string mnnFile);
+
 #endif  // WRITEFB_HPP

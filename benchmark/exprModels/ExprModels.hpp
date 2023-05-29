@@ -1,14 +1,13 @@
 #ifndef ExprModels_hpp
 #define ExprModels_hpp
 
-#include <ace/MNNDefine.h>
+#include <MNN/expr/Expr.hpp>
+#include <MNN/MNNDefine.h>
 
-#include <ace/expr/Expr.hpp>
-
-#include "GoogLeNetExpr.hpp"
 #include "MobileNetExpr.hpp"
 #include "ResNetExpr.hpp"
-#include "ShuffleNetExpr.hpp"
+#include "GoogLeNetExpr.hpp"
 #include "SqueezeNetExpr.hpp"
+#include "ShuffleNetExpr.hpp"
 
-#endif  // ExprModels_hpp
+#endif //ExprModels_hpp

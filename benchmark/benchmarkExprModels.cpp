@@ -16,16 +16,16 @@
 #include <sys/types.h>
 #endif
 
-#include <ace/types.h>
+#include <MNN/MNNForwardType.h>
 
-#include <ace/Interpreter.hpp>
-#include <ace/expr/Expr.hpp>
+#include <MNN/expr/Expr.hpp>
 
 #include "ExprModels.hpp"
-#include "ace_generated.h"
+#include "MNN_generated.h"
+#include "core/Interpreter.hpp"
 
-using namespace ace;
-using namespace ace::Express;
+using namespace tars;
+using namespace tars::Express;
 
 static inline uint64_t getTimeInUs() {
   uint64_t time;
@@ -44,10 +44,16 @@ static inline uint64_t getTimeInUs() {
   return time;
 }
 
-static inline std::string forwardType(DeviceType type) {
+static inline std::string forwardType(MNNForwardType type) {
   switch (type) {
-    case DeviceType::X86:
+    case MNN_FORWARD_CPU:
       return "CPU";
+    case MNN_FORWARD_VULKAN:
+      return "Vulkan";
+    case MNN_FORWARD_OPENCL:
+      return "OpenCL";
+    case MNN_FORWARD_METAL:
+      return "Metal";
     default:
       break;
   }
@@ -90,7 +96,7 @@ static std::vector<float> runNet(VARP netOutput, const ScheduleConfig& config,
   const void* buf = builder.GetBufferPointer();
   size_t size = builder.GetSize();
   std::unique_ptr<Interpreter> net(Interpreter::createFromBuffer(buf, size));
-  net->setSessionMode(ace::Interpreter::Session_Release);
+  net->setSessionMode(tars::Interpreter::Session_Release);
   auto session = net->createSession(config);
   net->releaseModel();
   auto inputTensor = net->getSessionInput(session, NULL);
@@ -156,7 +162,7 @@ static std::vector<std::string> gDefaultModels = {
 int main(int argc, const char* argv[]) {
   std::cout << "MNN Expr Models benchmark" << std::endl;
   size_t loop = 10;
-  DeviceType forward = DeviceType::X86;
+  MNNForwardType forward = MNN_FORWARD_CPU;
   size_t numThread = 4;
   if (argc <= 1) {
     _printHelp();
@@ -177,7 +183,7 @@ int main(int argc, const char* argv[]) {
     loop = atoi(argv[2]);
   }
   if (argc >= 4) {
-    forward = static_cast<DeviceType>(atoi(argv[3]));
+    forward = static_cast<MNNForwardType>(atoi(argv[3]));
   }
   if (argc >= 5) {
     numThread = atoi(argv[4]);

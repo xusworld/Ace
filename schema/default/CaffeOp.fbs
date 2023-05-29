@@ -1,7 +1,5 @@
 include "Tensor.fbs";
-
-namespace ace;
-
+namespace tars;
 enum PadMode : byte{
     CAFFE=0,
     VALID=1,
@@ -38,6 +36,9 @@ table Convolution3DCommon {
     outputCount:int = 0;
     relu:bool = false;
     relu6:bool = false;
+    group:int = 1;
+    outPads:[int];
+    hasOutputShape:bool = false;
 }
 
 enum SparseAlgo : byte {
@@ -88,6 +89,8 @@ table QuantizedFloatParam{
     outputZeroPoint: byte = 0;
     clampMin: byte = -128;
     clampMax: byte = 127;
+    // binary proto: [originKySize, originKxSize, transKySize, transKxSize, {kyStart, kxStart, unitY, unitX}, {...} ...]
+    winogradAttr:[int];
 }
 
 table Convolution2D {
@@ -97,12 +100,14 @@ table Convolution2D {
     quanParameter:IDSTQuan;
     symmetricQuan:QuantizedFloatParam;
     sparseParameter:SparseCommon;
+    external:[int64]; // [offset, weight_bytes_size, bias_bytes_size]
 }
 
 table Convolution3D {
     common:Convolution3DCommon;
     weight:[float];
     bias:[float];
+    external:[int64]; // [offset, weight_bytes_size, bias_bytes_size]
 }
 
 table InnerProduct {
@@ -180,6 +185,7 @@ table LRN {
     localSize:int;
     alpha:float;
     beta:float;
+    bias:float=1.0;
 }
 
 table ArgMax {
@@ -196,7 +202,7 @@ table Axis {
 table Input {
     dims:[int];
     dtype:DataType = DT_FLOAT;
-    dformat:DATA_FORMAT = NC4HW4;
+    dformat:MNN_DATA_FORMAT = NC4HW4;
 }
 
 table LSTM {
@@ -216,7 +222,7 @@ table LSTM {
 table Slice {
     axis:int;
     slicePoints:[int];
-    sourceType:FrontendFramework=CAFFE;
+    sourceType:NetSource=CAFFE;
 }
 
 table BatchNorm {
@@ -234,6 +240,7 @@ table Scale {
     channels:int;
     scaleData:[float];
     biasData:[float];
+    external:[int64]; // [offset, scaleData_bytes_size, biasData_bytes_size]
 }
 
 enum EltwiseType : byte {
@@ -259,7 +266,7 @@ table Permute {
 
 table Reshape {
     dims:[int];
-    dimType: DATA_FORMAT;
+    dimType: MNN_DATA_FORMAT;
 }
 
 table DetectionOutput {
@@ -275,10 +282,13 @@ table DetectionOutput {
     objectnessScore:float=0.01;
 }
 
-table RoiPooling {
+table RoiParameters {
     pooledWidth:int;
     pooledHeight:int;
     spatialScale:float;
+    samplingRatio:int = -1;
+    aligned:bool = false;
+    poolType:PoolType = AVEPOOL;
 }
 
 table Proposal {
@@ -315,7 +325,10 @@ table Interp {
     heightOffset:float;
     cubicCoeffA:float = -0.75;
     ctm:CoordinateTransformationMode = NotSet;
-}
+    depthScale:float;
+    outputDepth:int;
+    depthOffset:float;
+} 
 
 table Resize {
     xScale:float;
@@ -348,4 +361,9 @@ table EltwiseInt8 {
     inputQuan0:QuantizedFloatParam;
     inputQuan1:QuantizedFloatParam;
     outputQuan:QuantizedFloatParam;
+}
+
+table CumSum {
+    exclusive:bool;
+    reverse:bool;
 }

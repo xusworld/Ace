@@ -17,20 +17,21 @@
 
 #include <stdlib.h>
 
-#include <ace/ImageProcess.hpp>
-#include <ace/Interpreter.hpp>
+#include <MNN/ImageProcess.hpp>
 #include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <memory>
 #include <sstream>
+
+#include "core/Interpreter.hpp"
 #define STB_IMAGE_IMPLEMENTATION
 #include "rapidjson/document.h"
 #include "stb_image.h"
 #include "stb_image_write.h"
 
-using namespace ace;
-using namespace ace::CV;
+using namespace tars;
+using namespace tars::CV;
 
 #define TOPK 5
 #define TOTAL_CLASS_NUM 1001
@@ -116,7 +117,7 @@ int runEvaluation(const char* modelPath, const char* preTreatConfig) {
   std::shared_ptr<Interpreter> classficationInterpreter(
       Interpreter::createFromFile(modelPath));
   ScheduleConfig classficationEvalConfig;
-  classficationEvalConfig.type = DeviceType::X86;
+  classficationEvalConfig.type = MNN_FORWARD_CPU;
   classficationEvalConfig.numThread = 4;
   auto classficationSession =
       classficationInterpreter->createSession(classficationEvalConfig);

@@ -11,14 +11,14 @@
 
 #include <string>
 
-#include "../src/compression/PipelineBuilder.hpp"
+#include "../source/compression/PipelineBuilder.hpp"
 
 namespace common {
 
 // TODO(): Refine
 typedef struct Options {
-  bool doCompress;
-  compression::Pipeline compressionPipeline;
+    bool doCompress;
+    compression::Pipeline compressionPipeline;
 } Options;
 
 Options DefaultOptions();

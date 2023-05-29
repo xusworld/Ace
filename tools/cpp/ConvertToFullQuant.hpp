@@ -15,10 +15,10 @@
 #include <string>
 #include <vector>
 
-#include "ace_generated.h"
+#include "MNN_generated.h"
 #include "cpp/IDSTEncoder.hpp"
 
-using namespace ace;
+using namespace tars;
 
 namespace ConvertToFullQuant {
 
@@ -62,9 +62,9 @@ void ConvertOp(std::unique_ptr<OpT>& op, int opIndex, NetT* net,
   int outputIndex = op->outputIndexes[0];
   if ((opType == OpType_FloatToInt8) || (opType == OpType_Int8ToFloat)) {
     auto params = op->main.AsQuantizedFloatParam();
-    std::unique_ptr<ace::TensorDescribeT> describe(new ace::TensorDescribeT);
+    std::unique_ptr<tars::TensorDescribeT> describe(new tars::TensorDescribeT);
     describe->index = inputIndex;
-    std::unique_ptr<ace::TensorQuantInfoT> qInfo(new ace::TensorQuantInfoT);
+    std::unique_ptr<tars::TensorQuantInfoT> qInfo(new tars::TensorQuantInfoT);
     qInfo->zero = params->zeroPoint;
     if (opType == OpType_FloatToInt8) {
       qInfo->scale = 1. / params->tensorScale[0];
@@ -73,7 +73,7 @@ void ConvertOp(std::unique_ptr<OpT>& op, int opIndex, NetT* net,
     }
     qInfo->min = params->clampMin;
     qInfo->max = params->clampMax;
-    qInfo->type = ace::DataType_DT_INT8;
+    qInfo->type = tars::DataType_DT_INT8;
     describe->quantInfo = std::move(qInfo);
 
     if (opType == OpType_FloatToInt8) {
@@ -88,7 +88,7 @@ void ConvertOp(std::unique_ptr<OpT>& op, int opIndex, NetT* net,
           tensorDescribe[i]->quantInfo->scale = params->tensorScale[0];
           tensorDescribe[i]->quantInfo->min = params->clampMin;
           tensorDescribe[i]->quantInfo->max = params->clampMax;
-          tensorDescribe[i]->quantInfo->type = ace::DataType_DT_INT8;
+          tensorDescribe[i]->quantInfo->type = tars::DataType_DT_INT8;
           break;
         }
       }
@@ -144,16 +144,16 @@ void ConvertOp(std::unique_ptr<OpT>& op, int opIndex, NetT* net,
           conv2D->quanParameter->scaleOut = scaleOut;
           conv2D->symmetricQuan->weight.clear();
 
-          std::unique_ptr<ace::TensorDescribeT> describe(
-              new ace::TensorDescribeT);
+          std::unique_ptr<tars::TensorDescribeT> describe(
+              new tars::TensorDescribeT);
           describe->index = outputIndex;
-          std::unique_ptr<ace::TensorQuantInfoT> qInfo(
-              new ace::TensorQuantInfoT);
+          std::unique_ptr<tars::TensorQuantInfoT> qInfo(
+              new tars::TensorQuantInfoT);
           qInfo->zero = conv2D->symmetricQuan->outputZeroPoint;
           qInfo->scale = scaleOut;
           qInfo->min = conv2D->symmetricQuan->clampMin;
           qInfo->max = conv2D->symmetricQuan->clampMax;
-          qInfo->type = ace::DataType_DT_INT8;
+          qInfo->type = tars::DataType_DT_INT8;
           describe->quantInfo = std::move(qInfo);
           tensorDescribe.emplace_back(std::move(describe));
 
@@ -163,25 +163,25 @@ void ConvertOp(std::unique_ptr<OpT>& op, int opIndex, NetT* net,
     }
 
     // fake info
-    std::unique_ptr<ace::TensorDescribeT> describe(new ace::TensorDescribeT);
+    std::unique_ptr<tars::TensorDescribeT> describe(new tars::TensorDescribeT);
     describe->index = outputIndex;
-    std::unique_ptr<ace::TensorQuantInfoT> qInfo(new ace::TensorQuantInfoT);
+    std::unique_ptr<tars::TensorQuantInfoT> qInfo(new tars::TensorQuantInfoT);
     qInfo->zero = 0;
     qInfo->scale = 0;
     qInfo->min = -127;
     qInfo->max = 127;
-    qInfo->type = ace::DataType_DT_INT8;
+    qInfo->type = tars::DataType_DT_INT8;
     describe->quantInfo = std::move(qInfo);
     tensorDescribe.emplace_back(std::move(describe));
   }
 }
 
 void convert(std::string modelFile) {
-  std::unique_ptr<ace::NetT> netT;
+  std::unique_ptr<tars::NetT> netT;
   std::ifstream input(modelFile);
   std::ostringstream outputOs;
   outputOs << input.rdbuf();
-  netT = ace::UnPackNet(outputOs.str().c_str());
+  netT = tars::UnPackNet(outputOs.str().c_str());
   auto net = netT.get();
 
   std::vector<int> netNeedEraseIndices;
@@ -210,7 +210,7 @@ void convert(std::string modelFile) {
 
   flatbuffers::FlatBufferBuilder builderOutput(1024);
   builderOutput.ForceDefaults(true);
-  auto len = ace::Net::Pack(builderOutput, net);
+  auto len = tars::Net::Pack(builderOutput, net);
   builderOutput.Finish(len);
   std::ofstream output(modelFile);
   output.write((const char*)builderOutput.GetBufferPointer(),

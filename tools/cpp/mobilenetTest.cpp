@@ -8,10 +8,11 @@
 
 #include <stdio.h>
 
-#include <ace/ImageProcess.hpp>
-#include <ace/Interpreter.hpp>
+#include <MNN/ImageProcess.hpp>
+
+#include "core/Interpreter.hpp"
 #define MNN_OPEN_TIME_TRACE
-#include <ace/AutoTime.hpp>
+#include <MNN/AutoTime.hpp>
 #include <algorithm>
 #include <fstream>
 #include <functional>
@@ -23,8 +24,8 @@
 #include "stb_image.h"
 #include "stb_image_write.h"
 
-using namespace ace;
-using namespace ace::CV;
+using namespace tars;
+using namespace tars::CV;
 
 int main(int argc, const char* argv[]) {
   if (argc < 3) {
@@ -35,17 +36,17 @@ int main(int argc, const char* argv[]) {
   }
   std::shared_ptr<Interpreter> net(Interpreter::createFromFile(argv[1]));
   ScheduleConfig config;
-  config.type = DeviceType::X86;
+  config.type = MNN_FORWARD_CPU;
   config.numThread = 4;
   if (argc > 3) {
-    config.type = (DeviceType)::atoi(argv[3]);
+    config.type = (MNNForwardType)::atoi(argv[3]);
   }
 
-  ace::BackendConfig backendConfig;
-  backendConfig.precision = ace::BackendConfig::Precision_High;
+  tars::BackendConfig backendConfig;
+  backendConfig.precision = tars::BackendConfig::Precision_High;
   if (argc > 4) {
     backendConfig.precision =
-        (ace::BackendConfig::PrecisionMode)::atoi(argv[4]);
+        (tars::BackendConfig::PrecisionMode)::atoi(argv[4]);
   }
   config.backendConfig = &backendConfig;
   MNN_PRINT("model:%s, input image:%s, forwardType:%d, precision:%d\n", argv[1],

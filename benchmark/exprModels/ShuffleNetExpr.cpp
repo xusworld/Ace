@@ -7,12 +7,12 @@
 //  Copyright © 2018, Alibaba Group Holding Limited
 //
 
-#include <ace/expr/ExprCreator.hpp>
+#include <MNN/expr/ExprCreator.hpp>
 #include <map>
 
 #include "ShuffleNetExpr.hpp"
 
-using namespace ace::Express;
+using namespace tars::Express;
 
 // bottleNeckChannel = outputChannel / narrowRatio
 static VARP shuffleUnit(VARP x, int inputChannel, int outputChannel, int group,

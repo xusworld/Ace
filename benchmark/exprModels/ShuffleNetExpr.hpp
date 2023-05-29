@@ -10,8 +10,8 @@
 #ifndef ShuffleNetExpr_hpp
 #define ShuffleNetExpr_hpp
 
-#include <ace/expr/Expr.hpp>
+#include <MNN/expr/Expr.hpp>
 
-ace::Express::VARP shuffleNetExpr(int group, int numClass);
+tars::Express::VARP shuffleNetExpr(int group, int numClass);
 
 #endif  // ShuffleNetExpr_hpp

@@ -25,18 +25,19 @@
 #else
 #include <sys/time.h>
 #endif
-#include <ace/MNNDefine.h>
-#include <ace/tensor.h>
-#include <ace_generated.h>
+#include <MNN/MNNDefine.h>
+#include <MNN_generated.h>
 
-#include <ace/AutoTime.hpp>
-#include <ace/Interpreter.hpp>
-#include <core/Backend.hpp>
+#include <MNN/AutoTime.hpp>
 #include <core/TensorUtils.hpp>
+
+#include "core/Interpreter.hpp"
+#include "core/device.h"
+#include "core/tensor.h"
 
 // #define FEED_INPUT_NAME_VALUE
 
-using namespace ace;
+using namespace tars;
 
 #define DUMP_NUM_DATA(type)                    \
   auto data = tensor->host<type>();            \
@@ -56,7 +57,9 @@ using namespace ace;
     outputOs << "\n";                                            \
   }
 
-static void dumpTensor2File(const Tensor* tensor, const char* file) {
+static void dumpTensor2File(const Tensor* tensor, const char* file,
+                            std::ofstream& orderFile) {
+  orderFile << file << std::endl;
   std::ofstream outputOs(file);
   auto type = tensor->getType();
 
@@ -81,7 +84,17 @@ static void dumpTensor2File(const Tensor* tensor, const char* file) {
     DUMP_CHAR_DATA(uint8_t);
   }
   if (dataType == halide_type_int && dataBytes == 1) {
+#ifdef MNN_USE_SSE
+    auto data = tensor->host<uint8_t>();
+    for (int z = 0; z < outside; ++z) {
+      for (int x = 0; x < width; ++x) {
+        outputOs << (static_cast<int>(data[x + z * width]) - 128) << "\t";
+      }
+      outputOs << "\n";
+    }
+#else
     DUMP_CHAR_DATA(int8_t);
+#endif
   }
 }
 
@@ -108,7 +121,7 @@ static int test_main(int argc, const char* argv[]) {
         "======================================================================"
         "==\n");
     MNN_PRINT(
-        "Arguments: model.MNN runLoops saveAllTensors forwardType numberThread "
+        "Arguments: model.MNN runLoops runMask forwardType numberThread "
         "inputSize precision\n");
     MNN_PRINT(
         "======================================================================"
@@ -131,22 +144,26 @@ static int test_main(int argc, const char* argv[]) {
     runTime = ::atoi(argv[2]);
   }
 
-  int saveAllTensors = 0;
+  int runMask = 0;
   if (argc > 3) {
-    saveAllTensors = atoi(argv[3]);
-    if (saveAllTensors) {
-      MNN_PRINT("Save AllTensors to output/*.txt\n");
-    }
+    runMask = atoi(argv[3]);
   }
-
+  int saveOutput = 0;
+  if ((runMask & 1) || (runMask & 2)) {
+    MNN_PRINT("Save AllTensors to output/*.txt\n");
+    saveOutput = 1;
+  }
   int saveInput = 0;
-  if (saveAllTensors > 1) {
+  if (runMask & 2) {
     saveInput = 1;
   }
-
-  auto type = DeviceType::X86;
+  bool autoBackend = false;
+  if (runMask & 16) {
+    autoBackend = true;
+  }
+  auto type = MNN_FORWARD_CPU;
   if (argc > 4) {
-    type = (DeviceType)atoi(argv[4]);
+    type = (MNNForwardType)atoi(argv[4]);
     MNN_PRINT("Use extra forward type: %d\n", type);
   }
 
@@ -184,16 +201,23 @@ static int test_main(int argc, const char* argv[]) {
 
   // create net
   MNN_PRINT("Open Model %s\n", fileName);
-  std::shared_ptr<ace::Interpreter> net = std::shared_ptr<ace::Interpreter>(
-      ace::Interpreter::createFromFile(fileName));
+  std::shared_ptr<tars::Interpreter> net = std::shared_ptr<tars::Interpreter>(
+      tars::Interpreter::createFromFile(fileName), tars::Interpreter::destroy);
   if (nullptr == net) {
     return 0;
   }
   net->setCacheFile(".tempcache");
   net->setSessionMode(Interpreter::Session_Debug);
+  if (autoBackend) {
+    net->setSessionMode(Interpreter::Session_Backend_Auto);
+    net->setSessionHint(Interpreter::MAX_TUNING_NUMBER, 15);
+  }
+  if (!inputDims.empty()) {
+    net->setSessionMode(Interpreter::Session_Resize_Defer);
+  }
 
   // create session
-  ace::ScheduleConfig config;
+  tars::ScheduleConfig config;
   config.type = type;
   /*modeNum means gpuMode for GPU usage, Or means numThread for CPU usage.*/
   config.numThread = modeNum;
@@ -203,11 +227,11 @@ static int test_main(int argc, const char* argv[]) {
   // config.path.outputs.push_back("ResizeBilinear_2");
   // backendConfig.power = BackendConfig::Power_High;
   backendConfig.precision =
-      static_cast<ace::BackendConfig::PrecisionMode>(precision);
+      static_cast<tars::BackendConfig::PrecisionMode>(precision);
   // backendConfig.memory = BackendConfig::Memory_High;
   config.backendConfig = &backendConfig;
-  ace::Session* session = NULL;
-  ace::Tensor* inputTensor = nullptr;
+  tars::Session* session = NULL;
+  tars::Tensor* inputTensor = nullptr;
   {
     AUTOTIME;
     session = net->createSession(config);
@@ -219,17 +243,26 @@ static int test_main(int argc, const char* argv[]) {
       MNN_PRINT("===========> Resize Again...\n");
       net->resizeTensor(inputTensor, inputDims);
       net->resizeSession(session);
+      // Set when size is changed, After resizeSession
     }
   }
+  int resizeStatus = 0;
+  net->getSessionInfo(session, tars::Interpreter::RESIZE_STATUS, &resizeStatus);
+  if (resizeStatus != 0) {
+    MNN_ERROR("Resize error, can't execute MNN\n");
+    return 0;
+  }
+
   float memoryUsage = 0.0f;
-  net->getSessionInfo(session, ace::Interpreter::MEMORY, &memoryUsage);
+  net->getSessionInfo(session, tars::Interpreter::MEMORY, &memoryUsage);
   float flops = 0.0f;
-  net->getSessionInfo(session, ace::Interpreter::FLOPS, &flops);
+  net->getSessionInfo(session, tars::Interpreter::FLOPS, &flops);
   int backendType[2];
-  net->getSessionInfo(session, ace::Interpreter::BACKENDS, backendType);
+  net->getSessionInfo(session, tars::Interpreter::BACKENDS, backendType);
   MNN_PRINT(
       "Session Info: memory use %f MB, flops is %f M, backendType is %d\n",
       memoryUsage, flops, backendType[0]);
+  // Set Other Inputs to Zero
   auto allInput = net->getSessionInputAll(session);
   for (auto& iter : allInput) {
     auto inputTensor = iter.second;
@@ -237,13 +270,15 @@ static int test_main(int argc, const char* argv[]) {
     if (size <= 0) {
       continue;
     }
-    ace::Tensor tempTensor(inputTensor, inputTensor->getDimensionType());
+    tars::Tensor tempTensor(inputTensor, inputTensor->getDimensionType());
     ::memset(tempTensor.host<void>(), 0, tempTensor.size());
     inputTensor->copyFromHostTensor(&tempTensor);
   }
   MNN_PRINT("===========> Session Resize Done.\n");
   MNN_PRINT("===========> Session Start running...\n");
-  net->releaseModel();
+  if (type == MNN_FORWARD_CPU || (!autoBackend)) {
+    net->releaseModel();
+  }
 
   // input
   auto dimType = inputTensor->getDimensionType();
@@ -251,7 +286,7 @@ static int test_main(int argc, const char* argv[]) {
       inputTensor->getType().code == halide_type_int) {
     dimType = Tensor::TENSORFLOW;
   }
-  ace::Tensor givenTensor(inputTensor, dimType);
+  tars::Tensor givenTensor(inputTensor, dimType);
   {
     int size_w = inputTensor->width();
     int size_h = inputTensor->height();
@@ -304,18 +339,23 @@ static int test_main(int argc, const char* argv[]) {
     }
     inputTensor->copyFromHostTensor(&givenTensor);
   }
-
-  if (saveAllTensors) {
-    ace::TensorCallBack beforeCallBack =
-        [&](const std::vector<ace::Tensor*>& ntensors,
+  std::ofstream orderFileOs;
+  orderFileOs.open(".order");
+  if (saveOutput) {
+    tars::TensorCallBack beforeCallBack =
+        [&](const std::vector<tars::Tensor*>& ntensors,
             const std::string& opName) {
           if (!saveInput) {
             return true;
           }
           for (int i = 0; i < ntensors.size(); ++i) {
             auto ntensor = ntensors[i];
+            if (nullptr == ntensor->host<void>() && 0 == ntensor->deviceId()) {
+              // Raster Input
+              continue;
+            }
             auto outDimType = ntensor->getDimensionType();
-            auto expectTensor = new ace::Tensor(ntensor, outDimType);
+            auto expectTensor = new tars::Tensor(ntensor, outDimType);
             ntensor->copyToHostTensor(expectTensor);
             auto tensor = ntensor;
             std::ostringstream outputFileName;
@@ -329,18 +369,19 @@ static int test_main(int argc, const char* argv[]) {
                       i, tensor->width(), tensor->height(), tensor->channel(),
                       tensor->batch());
             outputFileName << "output/Input_" << opCopyName << "_" << i;
-            dumpTensor2File(expectTensor, outputFileName.str().c_str());
+            dumpTensor2File(expectTensor, outputFileName.str().c_str(),
+                            orderFileOs);
             delete expectTensor;
           }
           return true;
         };
-    ace::TensorCallBack callBack = [&](const std::vector<ace::Tensor*>&
-                                           ntensors,
-                                       const std::string& opName) {
+    tars::TensorCallBack callBack = [&](const std::vector<tars::Tensor*>&
+                                            ntensors,
+                                        const std::string& opName) {
       for (int i = 0; i < ntensors.size(); ++i) {
         auto ntensor = ntensors[i];
         auto outDimType = ntensor->getDimensionType();
-        auto expectTensor = new ace::Tensor(ntensor, outDimType);
+        auto expectTensor = new tars::Tensor(ntensor, outDimType);
         ntensor->copyToHostTensor(expectTensor);
 
         auto tensor = expectTensor;
@@ -368,7 +409,8 @@ static int test_main(int argc, const char* argv[]) {
         }
 
         outputFileName << "output/" << opCopyName << "_" << i;
-        dumpTensor2File(expectTensor, outputFileName.str().c_str());
+        dumpTensor2File(expectTensor, outputFileName.str().c_str(),
+                        orderFileOs);
         delete expectTensor;
       }
       return true;
@@ -380,23 +422,25 @@ static int test_main(int argc, const char* argv[]) {
 
   // save output
   auto outputTensor = net->getSessionOutput(session, NULL);
-  ace::Tensor expectTensor(outputTensor, outputTensor->getDimensionType());
+  tars::Tensor expectTensor(outputTensor, outputTensor->getDimensionType());
   {
     outputTensor->copyToHostTensor(&expectTensor);
     auto outputFile = pwd + "output.txt";
     if (outputTensor->size() > 0) {
-      dumpTensor2File(&expectTensor, outputFile.c_str());
+      dumpTensor2File(&expectTensor, outputFile.c_str(), orderFileOs);
+    } else {
+      MNN_ERROR("output size is 0, can't save\n");
     }
   }
   auto allOutputs = net->getSessionOutputAll(session);
   for (auto& iter : allOutputs) {
     MNN_PRINT("output: %s\n", iter.first.c_str());
     {
-      ace::Tensor expectTensor2(iter.second, iter.second->getDimensionType());
+      tars::Tensor expectTensor2(iter.second, iter.second->getDimensionType());
       iter.second->copyToHostTensor(&expectTensor2);
       auto outputFile = pwd + "/output/" + iter.first + ".txt";
       if (iter.second->size() > 0) {
-        dumpTensor2File(&expectTensor2, outputFile.c_str());
+        dumpTensor2File(&expectTensor2, outputFile.c_str(), orderFileOs);
       }
     }
   }
@@ -410,8 +454,8 @@ static int test_main(int argc, const char* argv[]) {
     std::map<std::string, std::string> opTypes;
     uint64_t opBegin = 0;
 
-    ace::TensorCallBackWithInfo beforeCallBack =
-        [&](const std::vector<ace::Tensor*>& ntensors,
+    tars::TensorCallBackWithInfo beforeCallBack =
+        [&](const std::vector<tars::Tensor*>& ntensors,
             const OperatorInfo* info) {
           if (opTypes.find(info->name()) == opTypes.end()) {
             opTypes.insert(std::make_pair(info->name(), info->type()));
@@ -423,8 +467,8 @@ static int test_main(int argc, const char* argv[]) {
           }
           return true;
         };
-    ace::TensorCallBackWithInfo afterCallBack =
-        [&](const std::vector<ace::Tensor*>& ntensors,
+    tars::TensorCallBackWithInfo afterCallBack =
+        [&](const std::vector<tars::Tensor*>& ntensors,
             const OperatorInfo* info) {
           auto opEnd = getTimeInUs();
           float cost = (float)(opEnd - opBegin) / 1000.0f;
@@ -434,6 +478,13 @@ static int test_main(int argc, const char* argv[]) {
         };
 
     if (t > 0) {
+      for (int i = 0; i < 3; ++i) {  // warmup
+        inputTensor->copyFromHostTensor(&givenTensor);
+        net->runSessionWithCallBackInfo(session, beforeCallBack, afterCallBack,
+                                        false);
+        outputTensor->copyToHostTensor(&expectTensor);
+      }
+
       std::vector<float> times(t, 0.0f);
       for (int i = 0; i < t; ++i) {
         auto begin = getTimeInUs();
@@ -460,7 +511,9 @@ static int test_main(int argc, const char* argv[]) {
       }
 
       std::sort(allOpsTimes.begin(), allOpsTimes.end());
+      float opSum = 0;
       for (auto& iter : allOpsTimes) {
+        opSum += iter.first;
         MNN_PRINT(
             "%*s \t[%s] run %d average cost %f ms, %.3f %%, FlopsRate: %.3f "
             "%%\n",
@@ -468,10 +521,12 @@ static int test_main(int argc, const char* argv[]) {
             runTime, iter.first / (float)runTime, iter.first / sum * 100.0f,
             iter.second.second / sumFlops * 100.0f);
       }
-      MNN_PRINT("Avg= %f ms, min= %f ms, max= %f ms\n", sum / (float)t,
-                *minTime, *maxTime);
+      opSum = opSum / runTime;
+      MNN_PRINT("Avg= %f ms, OpSum = %f ms min= %f ms, max= %f ms\n",
+                sum / (float)t, opSum, *minTime, *maxTime);
     }
   }
+  net->updateCacheFile(session);
   return 0;
 }
 

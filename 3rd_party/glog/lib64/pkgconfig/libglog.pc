@@ -1,0 +1,11 @@
+prefix=/data/lukedong/Ace/3rd_party/glog
+exec_prefix=/data/lukedong/Ace/3rd_party/glog/bin
+libdir=/data/lukedong/Ace/3rd_party/glog/lib64
+includedir=/data/lukedong/Ace/3rd_party/glog/include
+
+Name: libglog
+Description: Google Log (glog) C++ logging framework
+Version: 0.6.0
+Libs: -L${libdir} -lglog
+Libs.private: -lpthread -lgflags
+Cflags: -I${includedir}

@@ -1,1 +1,1 @@
-./build/benchmark.out ./models 10 10 0 4
+./build/benchmark.out ./benchmark/models/  10 10 0 1 1

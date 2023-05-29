@@ -7,23 +7,23 @@
 //
 
 #define MNN_OPEN_TIME_TRACE
-#include <ace/MNNDefine.h>
-#include <ace/tensor.h>
+#include <MNN/MNNDefine.h>
 #include <stdlib.h>
 
-#include <ace/AutoTime.hpp>
-#include <ace/Interpreter.hpp>
+#include <MNN/AutoTime.hpp>
 #include <cstring>
 #include <memory>
 #include <string>
 
 #include "Profiler.hpp"
+#include "core/Interpreter.hpp"
 #include "core/Macro.h"
+#include "core/tensor.h"
 #include "revertMNNModel.hpp"
 
 #define MNN_PRINT_TIME_BY_NAME
 
-using namespace ace;
+using namespace tars;
 
 int main(int argc, const char* argv[]) {
   std::string cmd = argv[0];
@@ -39,9 +39,9 @@ int main(int argc, const char* argv[]) {
   if (argc > 2) {
     runTime = ::atoi(argv[2]);
   }
-  auto type = DeviceType::X86;
+  auto type = MNN_FORWARD_CPU;
   if (argc > 3) {
-    type = (DeviceType)atoi(argv[3]);
+    type = (MNNForwardType)atoi(argv[3]);
     printf("Use extra forward type: %d\n", type);
   }
 
@@ -72,6 +72,12 @@ int main(int argc, const char* argv[]) {
     MNN_PRINT("Set ThreadNumber = %d\n", threadNumber);
   }
 
+  auto precision = BackendConfig::PrecisionMode::Precision_Normal;
+  if (argc > 6) {
+    precision = (BackendConfig::PrecisionMode)atoi(argv[6]);
+    printf("Use precision type: %d\n", precision);
+  }
+
   float sparsity = 0.0f;
   if (argc >= 8) {
     sparsity = atof(argv[7]);
@@ -94,10 +100,13 @@ int main(int argc, const char* argv[]) {
   net->setSessionMode(Interpreter::Session_Debug);
 
   // create session
-  ace::ScheduleConfig config;
+  tars::ScheduleConfig config;
   config.type = type;
   config.numThread = threadNumber;
-  ace::Session* session = NULL;
+  BackendConfig backendConfig;
+  backendConfig.precision = precision;
+  config.backendConfig = &backendConfig;
+  tars::Session* session = NULL;
   session = net->createSession(config);
   auto inputTensor = net->getSessionInput(session, NULL);
   if (!inputDims.empty()) {
@@ -111,29 +120,32 @@ int main(int argc, const char* argv[]) {
     if (size <= 0) {
       continue;
     }
-    ace::Tensor tempTensor(inputTensor, inputTensor->getDimensionType());
+    tars::Tensor tempTensor(inputTensor, inputTensor->getDimensionType());
     ::memset(tempTensor.host<void>(), 0, tempTensor.size());
     inputTensor->copyFromHostTensor(&tempTensor);
   }
   net->releaseModel();
-  std::shared_ptr<ace::Tensor> inputTensorUser(
-      ace::Tensor::createHostTensorFromDevice(inputTensor, false));
+  std::shared_ptr<tars::Tensor> inputTensorUser(
+      tars::Tensor::createHostTensorFromDevice(inputTensor, false));
   auto outputTensor = net->getSessionOutput(session, NULL);
   if (outputTensor->size() <= 0) {
     MNN_ERROR("Output not available\n");
     return 0;
   }
-  std::shared_ptr<ace::Tensor> outputTensorUser(
-      ace::Tensor::createHostTensorFromDevice(outputTensor, false));
+  std::shared_ptr<tars::Tensor> outputTensorUser(
+      tars::Tensor::createHostTensorFromDevice(outputTensor, false));
 
-  auto profiler = ace::Profiler::getInstance();
+  auto profiler = tars::Profiler::getInstance();
   auto beginCallBack = [&](const std::vector<Tensor*>& inputs,
                            const OperatorInfo* info) {
     profiler->start(info);
     return true;
   };
-  auto afterCallBack = [&](const std::vector<Tensor*>& inputs,
+  auto afterCallBack = [&](const std::vector<Tensor*>& tensors,
                            const OperatorInfo* info) {
+    for (auto o : tensors) {
+      o->wait(tars::Tensor::MAP_TENSOR_READ, true);
+    }
     profiler->end(info);
     return true;
   };
@@ -149,6 +161,7 @@ int main(int argc, const char* argv[]) {
 #ifdef MNN_PRINT_TIME_BY_NAME
   profiler->printTimeByName(runTime);
 #endif
+  profiler->printSlowOp("Convolution", 20, 0.03f);
   profiler->printTimeByType(runTime);
   return 0;
 }

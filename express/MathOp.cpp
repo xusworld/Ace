@@ -6,16 +6,16 @@
 //  Copyright © 2018, Alibaba Group Holding Limited
 //
 
-#include <ace/MNNDefine.h>
+#include <MNN/MNNDefine.h>
 
-#include <ace/expr/ExprCreator.hpp>
+#include <MNN/expr/ExprCreator.hpp>
 #include <algorithm>
 #include <map>
 #include <numeric>
 
 #include "Utils.hpp"
-
-namespace ace {
+#define MNN_DEFAULT_FLATBUFFER_SIZE 32
+namespace tars {
 namespace Express {
 static DataType _convertDataType(halide_type_t type) {
   if (type.code == halide_type_float) {
@@ -44,7 +44,7 @@ static VARP _checkNC4HW4(VARP x) {
 static VARP _Binary(VARP x, VARP y, BinaryOpOperation operation) {
   x = _checkNC4HW4(x);
   y = _checkNC4HW4(y);
-  flatbuffers::FlatBufferBuilder builder;
+  flatbuffers::FlatBufferBuilder builder(MNN_DEFAULT_FLATBUFFER_SIZE);
   BinaryOpBuilder parameter(builder);
   parameter.add_opType(operation);
   auto paOffset = parameter.Finish();
@@ -54,12 +54,11 @@ static VARP _Binary(VARP x, VARP y, BinaryOpOperation operation) {
   opB.add_main_type(OpParameter_BinaryOp);
   builder.Finish(opB.Finish());
   std::shared_ptr<BufferStorage> extra(new BufferStorage);
-  extra->storage.reset(
-      builder.ReleaseRaw(extra->allocated_size, extra->offset));
+  extra->storage = builder.ReleaseRaw(extra->allocated_size, extra->offset);
   return Variable::create(Expr::create(extra, {x, y}, 1));
 }
 static VARP _Unary(VARP x, UnaryOpOperation operation) {
-  flatbuffers::FlatBufferBuilder builder;
+  flatbuffers::FlatBufferBuilder builder(MNN_DEFAULT_FLATBUFFER_SIZE);
   UnaryOpBuilder parameter(builder);
   parameter.add_opType(operation);
   auto paOffset = parameter.Finish();
@@ -69,13 +68,12 @@ static VARP _Unary(VARP x, UnaryOpOperation operation) {
   opB.add_main_type(OpParameter_UnaryOp);
   builder.Finish(opB.Finish());
   std::shared_ptr<BufferStorage> extra(new BufferStorage);
-  extra->storage.reset(
-      builder.ReleaseRaw(extra->allocated_size, extra->offset));
+  extra->storage = builder.ReleaseRaw(extra->allocated_size, extra->offset);
   return Variable::create(Expr::create(extra, {x}, 1));
 }
 static VARP _Reduce(VARP x, INTS dim, ReductionType type, bool keepDim) {
   x = _checkNC4HW4(x);
-  flatbuffers::FlatBufferBuilder builder;
+  flatbuffers::FlatBufferBuilder builder(MNN_DEFAULT_FLATBUFFER_SIZE);
   flatbuffers::Offset<flatbuffers::Vector<int>> dimOffset;
   if (!dim.empty()) {
     dimOffset = builder.CreateVector(dim);
@@ -93,8 +91,7 @@ static VARP _Reduce(VARP x, INTS dim, ReductionType type, bool keepDim) {
   opB.add_main_type(OpParameter_ReductionParam);
   builder.Finish(opB.Finish());
   std::shared_ptr<BufferStorage> extra(new BufferStorage);
-  extra->storage.reset(
-      builder.ReleaseRaw(extra->allocated_size, extra->offset));
+  extra->storage = builder.ReleaseRaw(extra->allocated_size, extra->offset);
   return Variable::create(Expr::create(extra, {x}, 1));
 }
 static VARP _ReduceMutable(VARP x, VARP dim, ReductionType type, bool keepDim) {
@@ -111,8 +108,7 @@ static VARP _ReduceMutable(VARP x, VARP dim, ReductionType type, bool keepDim) {
   builder.Finish(opB.Finish());
   // TODO: Remove Copy
   std::shared_ptr<BufferStorage> extra(new BufferStorage);
-  extra->storage.reset(
-      builder.ReleaseRaw(extra->allocated_size, extra->offset));
+  extra->storage = builder.ReleaseRaw(extra->allocated_size, extra->offset);
   return Variable::create(Expr::create(extra, {x, dim}, 1));
 }
 static VARP _Eltwise(VARP a, VARP b, EltwiseType type,
@@ -392,6 +388,14 @@ A variable. Has the same type as x .
 */
 VARP _Gelu(VARP x) { return _Unary(x, UnaryOpOperation_GELU); }
 
+/*Computes Hardswish of x element-wise.
+Args:
+x: A variable. Must be one of the following types: Halide_Type_Float
+Returns:
+A variable. Has the same type as x .
+*/
+VARP _Hardswish(VARP x) { return _Unary(x, UnaryOpOperation_HARDSWISH); }
+
 /*Computes hyperbolic tangent of x element-wise.
 Given an input variable, this function computes hyperbolic tangent of every
 element in the variable. Input range is [-inf, inf] and output range is [-1,1].
@@ -400,22 +404,14 @@ x: A variable. Must be one of the following types: Halide_Type_Float
 Returns:
 A variable. Has the same type as x.
 */
-VARP _Tanh(VARP x) {
-  std::unique_ptr<OpT> op(new OpT);
-  op->type = OpType_TanH;
-  return (Variable::create(Expr::create(op.get(), {x})));
-}
+VARP _Tanh(VARP x) { return _Unary(x, UnaryOpOperation_TANH); }
 /*Computes sigmoid of x element-wise.
 Args:
 x: A variable. Must be one of the following types: Halide_Type_Float
 Returns:
 A variable. Has the same type as x.
 */
-VARP _Sigmoid(VARP x) {
-  std::unique_ptr<OpT> op(new OpT);
-  op->type = OpType_Sigmoid;
-  return (Variable::create(Expr::create(op.get(), {x})));
-}
+VARP _Sigmoid(VARP x) { return _Unary(x, UnaryOpOperation_SIGMOID); }
 
 /*Computes ((exponential of x) - 1) element-wise.
 Args:
@@ -628,6 +624,40 @@ A variable. Has the same type as x.
 
 VARP _NotEqual(VARP x, VARP y) {
   return _Binary(x, y, BinaryOpOperation_NOTEQUAL);
+}
+
+/*Returns the truth value of x & y element-wise.
+Args:
+x: A variable. Must be one of the following types: Halide_Type_Int
+y: A variable. Must have the same type as x.
+Returns:
+A variable. Has the same type as x.
+*/
+
+VARP _BitwiseAnd(VARP x, VARP y) {
+  return _Binary(x, y, BinaryOpOperation_BITWISE_AND);
+}
+
+/*Returns the truth value of x | y element-wise.
+Args:
+x: A variable. Must be one of the following types: Halide_Type_Int
+y: A variable. Must have the same type as x.
+Returns:
+A variable. Has the same type as x.
+*/
+VARP _BitwiseOr(VARP x, VARP y) {
+  return _Binary(x, y, BinaryOpOperation_BITWISE_OR);
+}
+
+/*Returns the truth value of x ^ y element-wise.
+Args:
+x: A variable. Must be one of the following types: Halide_Type_Int
+y: A variable. Must have the same type as x.
+Returns:
+A variable. Has the same type as x.
+*/
+VARP _BitwiseXor(VARP x, VARP y) {
+  return _Binary(x, y, BinaryOpOperation_BITWISE_XOR);
 }
 
 /*Computes the sum of elements across dimensions of a variable
@@ -936,13 +966,57 @@ VARP _UnravelIndex(VARP indices, VARP dims) {
   return (Variable::create(Expr::create(std::move(op), {indices, dims})));
 }
 
-VARP _ScatterNd(VARP indices, VARP updates, VARP shape) {
+VARP _ScatterNd(VARP indices, VARP updates, VARP shape, int reducetion) {
   std::unique_ptr<OpT> op(new OpT);
-  op->main.type = OpParameter_NONE;
+  op->main.type = OpParameter_BinaryOp;
   op->type = OpType_ScatterNd;
-  op->main.value = nullptr;
+  auto param = new BinaryOpT;
+  param->opType = reducetion;
+  op->main.value = param;
   return (
       Variable::create(Expr::create(std::move(op), {indices, updates, shape})));
+}
+
+VARP _ScatterNd(VARP indices, VARP updates, VARP shape, VARP input,
+                int reducetion) {
+  std::unique_ptr<OpT> op(new OpT);
+  op->main.type = OpParameter_BinaryOp;
+  op->type = OpType_ScatterNd;
+  auto param = new BinaryOpT;
+  param->opType = reducetion;
+  op->main.value = param;
+  return (Variable::create(
+      Expr::create(std::move(op), {indices, updates, shape, input})));
+}
+VARP _ScatterNd(VARP indices, VARP updates, VARP shape) {
+  return _ScatterNd(indices, updates, shape, -1);
+}
+
+VARP _ScatterNd(VARP indices, VARP updates, VARP shape, VARP input) {
+  return _ScatterNd(indices, updates, shape, input, -1);
+}
+
+VARP _ScatterElements(VARP data, VARP indices, VARP updates, int reducetion) {
+  std::unique_ptr<OpT> op(new OpT);
+  op->main.type = OpParameter_BinaryOp;
+  op->type = OpType_ScatterElements;
+  auto param = new BinaryOpT;
+  param->opType = reducetion;
+  op->main.value = param;
+  return (
+      Variable::create(Expr::create(std::move(op), {data, indices, updates})));
+}
+
+VARP _ScatterElements(VARP data, VARP indices, VARP updates, VARP axis,
+                      int reducetion) {
+  std::unique_ptr<OpT> op(new OpT);
+  op->main.type = OpParameter_BinaryOp;
+  op->type = OpType_ScatterElements;
+  auto param = new BinaryOpT;
+  param->opType = reducetion;
+  op->main.value = param;
+  return (Variable::create(
+      Expr::create(std::move(op), {data, indices, updates, axis})));
 }
 
 VARP _OneHot(VARP indices, VARP depth, VARP onValue, VARP offValue, int axis) {
@@ -1024,5 +1098,72 @@ VARP _EltwiseMaxInt8(
                       output_tensorScale);
 }
 
+VARP _RandomUnifom(VARP shape, halide_type_t dtype, float low, float high,
+                   int seed0, int seed1) {
+  flatbuffers::FlatBufferBuilder builder(MNN_DEFAULT_FLATBUFFER_SIZE);
+  RandomUniformBuilder paramBuilder(builder);
+  paramBuilder.add_type(_convertDataType(dtype));
+  paramBuilder.add_low(low);
+  paramBuilder.add_high(high);
+  paramBuilder.add_seed(seed0);
+  paramBuilder.add_seed2(seed1);
+  auto parmOffset = paramBuilder.Finish();
+  OpBuilder opB(builder);
+  opB.add_type(OpType_RandomUniform);
+  opB.add_main(parmOffset.Union());
+  opB.add_main_type(OpParameter_RandomUniform);
+  builder.Finish(opB.Finish());
+  std::shared_ptr<BufferStorage> extra(new BufferStorage);
+  extra->storage = builder.ReleaseRaw(extra->allocated_size, extra->offset);
+  return Variable::create(Expr::create(extra, {shape}, 1));
+}
+
+VARP _Mod(VARP x, VARP y) { return _Binary(x, y, BinaryOpOperation_MOD); }
+
+VARP _CumSum(VARP x, int axis, bool exclusive, bool reverse) {
+  std::unique_ptr<OpT> op(new OpT);
+  op->type = OpType_CumSum;
+  op->main.type = OpParameter_CumSum;
+  auto param = new CumSumT;
+  param->exclusive = exclusive;
+  param->reverse = reverse;
+  op->main.value = param;
+  return (Variable::create(Expr::create(std::move(op), {x, _Scalar(axis)})));
+}
+
+VARP _CumProd(VARP x, int axis) {
+  std::unique_ptr<OpT> op(new OpT);
+  op->type = OpType_CumProd;
+  op->main.type = OpParameter_Axis;
+  auto param = new AxisT;
+  param->axis = axis;
+  op->main.value = param;
+  return (Variable::create(Expr::create(std::move(op), {x})));
+}
+
+VARPS _Svd(VARP x) {
+  std::unique_ptr<OpT> op(new OpT);
+  op->type = OpType_Svd;
+  op->main.type = OpParameter_NONE;
+  op->main.value = nullptr;
+  EXPRP expr = Expr::create(std::move(op), {x}, 3);
+  return {Variable::create(expr, 0), Variable::create(expr, 1),
+          Variable::create(expr, 2)};
+}
+
+VARP _Histogram(VARP x, int bin, int min, int max, int channel) {
+  std::unique_ptr<OpT> op(new OpT);
+  op->type = OpType_Histogram;
+  op->main.type = OpParameter_ArgMax;
+  auto param = new ArgMaxT;
+  param->outMaxVal = bin;
+  param->softmaxThreshold = min;
+  param->topK = max;
+  param->axis = channel;
+  op->main.value = param;
+  EXPRP expr = Expr::create(std::move(op), {x});
+  return (Variable::create(Expr::create(std::move(op), {x})));
+}
+
 }  // namespace Express
-}  // namespace ace
+}  // namespace tars

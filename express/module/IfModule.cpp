@@ -7,8 +7,9 @@
 //
 
 #include "IfModule.hpp"
-#include "ace_generated.h"
-namespace ace {
+#include "MNN_generated.h"
+
+namespace tars {
 namespace Express {
 static int _findPos(const std::vector<std::string>& names,
                     const std::string& key) {
@@ -23,6 +24,7 @@ std::vector<Express::VARP> IfModule::onForward(
     const std::vector<Express::VARP>& inputs) {
   std::vector<Express::VARP> outputs(mOutputFromElse.size());
   MNN_ASSERT(mOutputFromThen.size() == mOutputFromElse.size());
+
   if (inputs[0]->readMap<int>()[0] > 0) {
     std::vector<Express::VARP> subInputs(mInputForThen.size());
     for (auto& p : mInputForThen) {
@@ -56,6 +58,7 @@ IfModule* IfModule::create(const Op* op,
   if (nullptr != op->name()) {
     module->setName(op->name()->str());
   }
+
   /** Compute map index
    std::vector<std::pair<int, int>> mInputForThen;
 
@@ -88,6 +91,13 @@ IfModule* IfModule::create(const Op* op,
   MNN_ASSERT(module->mInputForThen.size() == thenG.inputs.size());
   // Map outputs
   auto output = ifParam->aliases_outputs();
+  if (output == nullptr) {  // Onnx
+    for (int i = 0; i < op->outputIndexes()->size(); ++i) {
+      module->mOutputFromThen.push_back(i);
+      module->mOutputFromElse.push_back(i);
+    }
+    return module;
+  }
   module->mOutputFromThen.resize(output->size());
   module->mOutputFromElse.resize(output->size());
   for (int i = 0; i < output->size(); ++i) {
@@ -115,4 +125,4 @@ Module* IfModule::clone(CloneContext* ctx) const {
 }
 
 }  // namespace Express
-}  // namespace ace
+}  // namespace tars

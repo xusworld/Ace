@@ -6,9 +6,7 @@
 //  Copyright © 2018, Alibaba Group Holding Limited
 //
 
-#include <glog/logging.h>
-
-#include <ace/ImageProcess.hpp>
+#include <MNN/ImageProcess.hpp>
 #include <algorithm>
 #include <cmath>
 #include <fstream>
@@ -19,15 +17,16 @@
 
 #include "calibration.hpp"
 #include "flatbuffers/util.h"
+#include "logkit.h"
 #include "quantizeWeight.hpp"
 #include "rapidjson/document.h"
 #include "rapidjson/prettywriter.h"
 #include "rapidjson/stringbuffer.h"
 // #define MNN_OPEN_TIME_TRACE
-#include <ace/AutoTime.hpp>
-#include <ace/expr/Executor.hpp>
-#include <ace/expr/ExprCreator.hpp>
-#include <ace/expr/Module.hpp>
+#include <MNN/AutoTime.hpp>
+#include <MNN/expr/Executor.hpp>
+#include <MNN/expr/ExprCreator.hpp>
+#include <MNN/expr/Module.hpp>
 
 #include "Helper.hpp"
 #include "core/TensorUtils.hpp"
@@ -39,11 +38,11 @@
 #include "train/source/optimizer/SGD.hpp"
 #include "train/source/transformer/Transformer.hpp"
 
-using namespace ace::CV;
-using namespace ace::Train;
-using namespace ace::Express;
+using namespace tars::CV;
+using namespace tars::Train;
+using namespace tars::Express;
 
-Calibration::Calibration(ace::NetT* model, const uint8_t* modelBuffer,
+Calibration::Calibration(tars::NetT* model, const uint8_t* modelBuffer,
                          const int bufferSize, const std::string& configPath,
                          std::string originalModelFile,
                          std::string destModelFile)
@@ -135,9 +134,11 @@ Calibration::Calibration(ace::NetT* model, const uint8_t* modelBuffer,
     if (picObj.HasMember("quant_bits")) {
       _quant_bits = picObj["quant_bits"].GetInt();
     }
-    if (picObj.HasMember("path")) {
-      _calibrationFilePath = picObj["path"].GetString();
+    if (!picObj.HasMember("path")) {
+      MNN_ERROR("calibration data path not set in .json config file\n");
+      return;
     }
+    _calibrationFilePath = picObj["path"].GetString();
     if (picObj.HasMember("used_image_num")) {
       _calibrationFileNum = picObj["used_image_num"].GetInt();
     }
@@ -190,6 +191,14 @@ Calibration::Calibration(ace::NetT* model, const uint8_t* modelBuffer,
     }
     DLOG(INFO) << "feature_clamp_value: " << _featureClampValue;
     DLOG(INFO) << "weight_clamp_value: " << _weightClampValue;
+    if (picObj.HasMember("winogradOpt") &&
+        picObj["winogradOpt"].GetBool() == true) {
+      if (_featureQuantizeMethod == "EMA") {
+        _winogradOpt = true;
+      } else {
+        DLOG(ERROR) << "winogradOpt only be available under EMA";
+      }
+    }
     if (picObj.HasMember("skip_quant_op_names")) {
       auto skip_quant_op_names = picObj["skip_quant_op_names"].GetArray();
       for (auto iter = skip_quant_op_names.begin();
@@ -219,7 +228,7 @@ Calibration::Calibration(ace::NetT* model, const uint8_t* modelBuffer,
                               &_calibrationFileNum);
 
   for (auto& op : _originalModel->oplists) {
-    if (op->type == ace::OpType_BatchNorm) {
+    if (op->type == tars::OpType_BatchNorm) {
       _featureQuantizeMethod = "EMA";
       DLOG(INFO) << "this model has BatchNorm, use EMA quantize method instead";
       break;
@@ -227,7 +236,7 @@ Calibration::Calibration(ace::NetT* model, const uint8_t* modelBuffer,
   }
   for (auto& subgraph : _originalModel->subgraphs) {
     for (auto& op : subgraph->nodes) {
-      if (op->type == ace::OpType_BatchNorm) {
+      if (op->type == tars::OpType_BatchNorm) {
         _featureQuantizeMethod = "EMA";
         DLOG(INFO)
             << "this model has BatchNorm, use EMA quantize method instead";
@@ -247,8 +256,8 @@ std::vector<int> Calibration::_getInputShape(std::string filename) {
   if (_inputType == Helper::InputType::IMAGE) {
     inputShape.resize(4);
     auto inputTensorDataFormat =
-        ace::TensorUtils::getDescribe(_inputTensor)->dimensionFormat;
-    if (inputTensorDataFormat == ace::DATA_FORMAT_NHWC) {
+        tars::TensorUtils::getDescribe(_inputTensor)->dimensionFormat;
+    if (inputTensorDataFormat == tars::MNN_DATA_FORMAT_NHWC) {
       inputShape[0] = 1;
       inputShape[1] = _height;
       inputShape[2] = _width;
@@ -291,8 +300,8 @@ std::vector<int> Calibration::_getInputShape(std::string filename) {
 
     inputShape.resize(3);
     auto inputTensorDataFormat =
-        ace::TensorUtils::getDescribe(_inputTensor)->dimensionFormat;
-    if (inputTensorDataFormat == ace::DATA_FORMAT_NHWC) {
+        tars::TensorUtils::getDescribe(_inputTensor)->dimensionFormat;
+    if (inputTensorDataFormat == tars::MNN_DATA_FORMAT_NHWC) {
       inputShape[0] = 1;
       inputShape[1] = _height;
       inputShape[2] = _channels;
@@ -322,8 +331,8 @@ void Calibration::_resizeIfNeeded(std::string filename, bool force) {
 void Calibration::_initMNNSession(const uint8_t* modelBuffer,
                                   const int bufferSize) {
   _interpreterOrigin.reset(
-      ace::Interpreter::createFromBuffer(modelBuffer, bufferSize));
-  ace::ScheduleConfig config;
+      tars::Interpreter::createFromBuffer(modelBuffer, bufferSize));
+  tars::ScheduleConfig config;
   _sessionOrigin = _interpreterOrigin->createSession(config);
   _inputTensorOrigin =
       _interpreterOrigin->getSessionInput(_sessionOrigin, NULL);
@@ -331,12 +340,12 @@ void Calibration::_initMNNSession(const uint8_t* modelBuffer,
   _fake_quant_weights();
 
   flatbuffers::FlatBufferBuilder builder(1024);
-  auto offset = ace::Net::Pack(builder, _originalModel);
+  auto offset = tars::Net::Pack(builder, _originalModel);
   builder.Finish(offset);
   int size = builder.GetSize();
   auto buffer = builder.GetBufferPointer();
 
-  _interpreter.reset(ace::Interpreter::createFromBuffer(buffer, size));
+  _interpreter.reset(tars::Interpreter::createFromBuffer(buffer, size));
   _session = _interpreter->createSession(config);
   _inputTensor = _interpreter->getSessionInput(_session, NULL);
 
@@ -370,9 +379,9 @@ void Calibration::_initMaps() {
   _opInfo.clear();
   _tensorMap.clear();
   // run mnn once, initialize featureMap, opInfo map
-  ace::TensorCallBackWithInfo before =
-      [&](const std::vector<ace::Tensor*>& nTensors,
-          const ace::OperatorInfo* info) {
+  tars::TensorCallBackWithInfo before =
+      [&](const std::vector<tars::Tensor*>& nTensors,
+          const tars::OperatorInfo* info) {
         std::string opName = info->name();
         std::vector<std::string>::iterator iter =
             std::find(_skip_quant_ops.begin(), _skip_quant_ops.end(), opName);
@@ -385,8 +394,8 @@ void Calibration::_initMaps() {
           int i = 0;
           for (auto t : nTensors) {
             if (_featureInfo.find(t) == _featureInfo.end() &&
-                ace::TensorUtils::getDescribe(t)->memoryType !=
-                    ace::Tensor::InsideDescribe::MEMORY_VIRTUAL) {
+                tars::TensorUtils::getDescribe(t)->memoryType !=
+                    tars::Tensor::InsideDescribe::MEMORY_VIRTUAL) {
               _featureInfo[t] =
                   std::shared_ptr<TensorStatistic>(new TensorStatistic(
                       t, _featureQuantizeMethod,
@@ -398,9 +407,9 @@ void Calibration::_initMaps() {
         }
         return false;
       };
-  ace::TensorCallBackWithInfo after =
-      [this](const std::vector<ace::Tensor*>& nTensors,
-             const ace::OperatorInfo* info) {
+  tars::TensorCallBackWithInfo after =
+      [this](const std::vector<tars::Tensor*>& nTensors,
+             const tars::OperatorInfo* info) {
         std::string opName = info->name();
         std::vector<std::string>::iterator iter =
             std::find(_skip_quant_ops.begin(), _skip_quant_ops.end(), opName);
@@ -426,9 +435,9 @@ void Calibration::_initMaps() {
       };
   _interpreter->runSessionWithCallBackInfo(_session, before, after);
 
-  ace::TensorCallBackWithInfo beforeOrigin =
-      [&](const std::vector<ace::Tensor*>& nTensors,
-          const ace::OperatorInfo* info) {
+  tars::TensorCallBackWithInfo beforeOrigin =
+      [&](const std::vector<tars::Tensor*>& nTensors,
+          const tars::OperatorInfo* info) {
         std::string opName = info->name();
         std::vector<std::string>::iterator iter =
             std::find(_skip_quant_ops.begin(), _skip_quant_ops.end(), opName);
@@ -451,9 +460,9 @@ void Calibration::_initMaps() {
         }
         return false;
       };
-  ace::TensorCallBackWithInfo afterOrigin =
-      [this](const std::vector<ace::Tensor*>& nTensors,
-             const ace::OperatorInfo* info) {
+  tars::TensorCallBackWithInfo afterOrigin =
+      [this](const std::vector<tars::Tensor*>& nTensors,
+             const tars::OperatorInfo* info) {
         std::string opName = info->name();
         std::vector<std::string>::iterator iter =
             std::find(_skip_quant_ops.begin(), _skip_quant_ops.end(), opName);
@@ -518,9 +527,9 @@ void Calibration::_computeFeatureMapsRange() {
     Helper::preprocessInput(_process.get(), _preprocessConfig, file,
                             _inputTensor, _inputType);
 
-    ace::TensorCallBackWithInfo before =
-        [&](const std::vector<ace::Tensor*>& nTensors,
-            const ace::OperatorInfo* info) {
+    tars::TensorCallBackWithInfo before =
+        [&](const std::vector<tars::Tensor*>& nTensors,
+            const tars::OperatorInfo* info) {
           for (auto t : nTensors) {
             if (_featureInfo.find(t) != _featureInfo.end()) {
               if (_featureInfo[t]->visited() == false) {
@@ -530,9 +539,9 @@ void Calibration::_computeFeatureMapsRange() {
           }
           return true;
         };
-    ace::TensorCallBackWithInfo after =
-        [&](const std::vector<ace::Tensor*>& nTensors,
-            const ace::OperatorInfo* info) {
+    tars::TensorCallBackWithInfo after =
+        [&](const std::vector<tars::Tensor*>& nTensors,
+            const tars::OperatorInfo* info) {
           for (auto t : nTensors) {
             if (_featureInfo.find(t) != _featureInfo.end()) {
               if (_featureInfo[t]->visited() == false) {
@@ -556,9 +565,9 @@ void Calibration::_collectFeatureMapsDistribution() {
     iter.second->resetDistribution();
   }
   // feed input data according to input images
-  ace::TensorCallBackWithInfo before =
-      [&](const std::vector<ace::Tensor*>& nTensors,
-          const ace::OperatorInfo* info) {
+  tars::TensorCallBackWithInfo before =
+      [&](const std::vector<tars::Tensor*>& nTensors,
+          const tars::OperatorInfo* info) {
         for (auto t : nTensors) {
           if (_featureInfo.find(t) != _featureInfo.end()) {
             if (_featureInfo[t]->visited() == false) {
@@ -568,9 +577,9 @@ void Calibration::_collectFeatureMapsDistribution() {
         }
         return true;
       };
-  ace::TensorCallBackWithInfo after =
-      [&](const std::vector<ace::Tensor*>& nTensors,
-          const ace::OperatorInfo* info) {
+  tars::TensorCallBackWithInfo after =
+      [&](const std::vector<tars::Tensor*>& nTensors,
+          const tars::OperatorInfo* info) {
         for (auto t : nTensors) {
           if (_featureInfo.find(t) != _featureInfo.end()) {
             if (_featureInfo[t]->visited() == false) {
@@ -621,15 +630,15 @@ void Calibration::_computeFeatureScaleADMM() {
   std::vector<int> oneImageTensorDims = _inputTensorDims;
   oneImageTensorDims[0] = 1;
   auto inputTensorDataFormat =
-      ace::TensorUtils::getDescribe(_inputTensor)->dimensionFormat;
-  auto dimType = ace::Tensor::CAFFE_C4;
-  if (inputTensorDataFormat == ace::DATA_FORMAT_NHWC) {
-    dimType = ace::Tensor::TENSORFLOW;
+      tars::TensorUtils::getDescribe(_inputTensor)->dimensionFormat;
+  auto dimType = tars::Tensor::CAFFE_C4;
+  if (inputTensorDataFormat == tars::MNN_DATA_FORMAT_NHWC) {
+    dimType = tars::Tensor::TENSORFLOW;
   }
 
   for (const auto& file : _calibrationFiles) {
     auto curPtr = _inputTensor->host<float>() + count * _inputTensor->stride(0);
-    std::shared_ptr<ace::Tensor> tensorWarp(ace::Tensor::create(
+    std::shared_ptr<tars::Tensor> tensorWarp(tars::Tensor::create(
         oneImageTensorDims, _inputTensor->getType(), curPtr, dimType));
     Helper::preprocessInput(_process.get(), _preprocessConfig, file,
                             tensorWarp.get(), _inputType);
@@ -645,9 +654,9 @@ void Calibration::_computeFeatureScaleADMM() {
   const int totalLayers = _featureInfo.size();
   count = 0;
 
-  ace::TensorCallBackWithInfo before =
-      [&](const std::vector<ace::Tensor*>& nTensors,
-          const ace::OperatorInfo* info) {
+  tars::TensorCallBackWithInfo before =
+      [&](const std::vector<tars::Tensor*>& nTensors,
+          const tars::OperatorInfo* info) {
         if (Helper::gNotNeedFeatureOp.find(info->type()) ==
             Helper::gNotNeedFeatureOp.end()) {
           for (auto t : nTensors) {
@@ -664,9 +673,9 @@ void Calibration::_computeFeatureScaleADMM() {
         }
         return true;
       };
-  ace::TensorCallBackWithInfo after =
-      [&](const std::vector<ace::Tensor*>& nTensors,
-          const ace::OperatorInfo* info) {
+  tars::TensorCallBackWithInfo after =
+      [&](const std::vector<tars::Tensor*>& nTensors,
+          const tars::OperatorInfo* info) {
         if (Helper::gNotNeedFeatureOp.find(info->type()) ==
             Helper::gNotNeedFeatureOp.end()) {
           for (auto t : nTensors) {
@@ -708,8 +717,8 @@ void Calibration::_fake_quant_weights() {
     }
 
     const auto opType = op->type;
-    if (opType != ace::OpType_Convolution &&
-        opType != ace::OpType_ConvolutionDepthwise) {
+    if (opType != tars::OpType_Convolution &&
+        opType != tars::OpType_ConvolutionDepthwise) {
       continue;
     }
 
@@ -742,11 +751,11 @@ void Calibration::_fake_quant_weights() {
 
 void Calibration::_insertScale() {
   for (const auto iter : _scales) {
-    std::unique_ptr<ace::TensorDescribeT> describe(new ace::TensorDescribeT);
+    std::unique_ptr<tars::TensorDescribeT> describe(new tars::TensorDescribeT);
     describe->index = _tensorIdx[iter.first];
-    describe->quantInfo.reset(new ace::TensorQuantInfoT);
+    describe->quantInfo.reset(new tars::TensorQuantInfoT);
     describe->quantInfo->scale = iter.second;
-    describe->quantInfo->type = ace::DataType_DT_INT8;
+    describe->quantInfo->type = tars::DataType_DT_INT8;
     describe->quantInfo->min = -1 * _featureClampValue;
     describe->quantInfo->max = 1 * _featureClampValue;
     _originalModel->extraTensorDescribe.emplace_back(std::move(describe));
@@ -760,8 +769,8 @@ void Calibration::_insertScale() {
       continue;
     }
 
-    if (opType != ace::OpType_Convolution &&
-        opType != ace::OpType_ConvolutionDepthwise) {
+    if (opType != tars::OpType_Convolution &&
+        opType != tars::OpType_ConvolutionDepthwise) {
       continue;
     }
     auto tensorsPair = _opInfo.find(op->name);
@@ -776,9 +785,9 @@ void Calibration::_insertScale() {
     auto param = op->main.AsConvolution2D();
     param->common->inputCount = tensorsPair->second.first[0]->channel();
     const int channles = param->common->outputCount;
-    const int weightSize = param->weight.size();
-    param->symmetricQuan.reset(new ace::QuantizedFloatParamT);
+    param->symmetricQuan.reset(new tars::QuantizedFloatParamT);
     param->symmetricQuan->nbits = _quant_bits;
+    const int weightSize = param->weight.size();
     std::vector<int8_t> quantizedWeight(weightSize);
     std::vector<float> quantizedWeightScale(outputChannel);
     if (_weightQuantizeMethod == "MAX_ABS") {
@@ -816,9 +825,9 @@ void Calibration::_computeQuantError() {
 
     std::map<std::string, std::vector<float>> fakeQuantedFeatures;
 
-    ace::TensorCallBackWithInfo before =
-        [&](const std::vector<ace::Tensor*>& nTensors,
-            const ace::OperatorInfo* info) {
+    tars::TensorCallBackWithInfo before =
+        [&](const std::vector<tars::Tensor*>& nTensors,
+            const tars::OperatorInfo* info) {
           if (info->type() == "Raster") {
             return true;
           }
@@ -836,9 +845,9 @@ void Calibration::_computeQuantError() {
           }
           return true;
         };
-    ace::TensorCallBackWithInfo after =
-        [&](const std::vector<ace::Tensor*>& nTensors,
-            const ace::OperatorInfo* info) {
+    tars::TensorCallBackWithInfo after =
+        [&](const std::vector<tars::Tensor*>& nTensors,
+            const tars::OperatorInfo* info) {
           for (auto t : nTensors) {
             if (_featureInfo.find(t) != _featureInfo.end()) {
               if (_featureInfo[t]->visited() == false) {
@@ -863,9 +872,9 @@ void Calibration::_computeQuantError() {
     Helper::preprocessInput(_process.get(), _preprocessConfig, file,
                             _inputTensorOrigin, _inputType);
 
-    ace::TensorCallBackWithInfo beforeOrigin =
-        [&](const std::vector<ace::Tensor*>& nTensors,
-            const ace::OperatorInfo* info) {
+    tars::TensorCallBackWithInfo beforeOrigin =
+        [&](const std::vector<tars::Tensor*>& nTensors,
+            const tars::OperatorInfo* info) {
           if (info->type() == "Raster") {
             return true;
           }
@@ -881,9 +890,9 @@ void Calibration::_computeQuantError() {
           }
           return true;
         };
-    ace::TensorCallBackWithInfo afterOrigin =
-        [&](const std::vector<ace::Tensor*>& nTensors,
-            const ace::OperatorInfo* info) {
+    tars::TensorCallBackWithInfo afterOrigin =
+        [&](const std::vector<tars::Tensor*>& nTensors,
+            const tars::OperatorInfo* info) {
           for (auto t : nTensors) {
             if (_featureInfoOrigin.find(t) != _featureInfoOrigin.end()) {
               if (_featureInfoOrigin[t]->visited() == false) {
@@ -935,13 +944,26 @@ void Calibration::_quantizeModelEMA() {
   auto inputOutputs = Variable::getInputAndOutput(varMap);
   auto inputs = Variable::mapToSequence(inputOutputs.first);
   auto outputs = Variable::mapToSequence(inputOutputs.second);
-
+  if (inputs.size() != 1) {
+    MNN_ERROR("Only support input size = 1\n");
+    return;
+  }
+  auto originInfo = inputs[0]->getInfo();
+  auto originFormat = NC4HW4;
+  auto originType = halide_type_of<float>();
+  std::vector<int> originDims;
+  if (nullptr != originInfo) {
+    originFormat = originInfo->order;
+    originDims = originInfo->dim;
+    originType = originInfo->type;
+  }
   std::shared_ptr<Module> model(NN::extract(inputs, outputs, true));
-  NN::turnQuantize(model.get(), _quant_bits);
+  NN::turnQuantize(model.get(), _quant_bits, NN::PerTensor, NN::MovingAverage,
+                   _winogradOpt);
 
   auto exe = Executor::getGlobalExecutor();
   BackendConfig config;
-  exe->setGlobalExecutorConfig(DeviceType::X86, config, 2);
+  exe->setGlobalExecutorConfig(MNN_FORWARD_CPU, config, 2);
 
   std::shared_ptr<SGD> solver(new SGD(model));
   solver->setLearningRate(1e-5);
@@ -950,9 +972,13 @@ void Calibration::_quantizeModelEMA() {
 
   DLOG(INFO) << "batch size: " << _batch;
   DLOG(INFO) << "quant bits: " << _quant_bits;
-
+  if (_calibrationFileNum < _batch) {
+    MNN_ERROR("_calibrationFileNum %d < batch size %d, set batch size as %d\n",
+              _calibrationFileNum, _batch, _calibrationFileNum);
+    _batch = _calibrationFileNum;
+  }
   DataLoader* trainDataLoader = nullptr;
-  std::shared_ptr<ace::Tensor> tempInputTensor = nullptr;
+  std::shared_ptr<tars::Tensor> tempInputTensor = nullptr;
   if (_inputType == Helper::InputType::IMAGE) {
     auto converImagesToFormat = _imageProcessConfig.destFormat;
     int resizeHeight = _preprocessConfig.targetHeight;
@@ -981,23 +1007,21 @@ void Calibration::_quantizeModelEMA() {
     trainDataLoader->reset();
   } else {
     flatbuffers::FlatBufferBuilder builder(1024);
-    auto offset = ace::Net::Pack(builder, _originalModel);
+    auto offset = tars::Net::Pack(builder, _originalModel);
     builder.Finish(offset);
     int size = builder.GetSize();
     auto buffer = builder.GetBufferPointer();
-    _interpreter.reset(ace::Interpreter::createFromBuffer(buffer, size));
-    ace::ScheduleConfig config;
+    _interpreter.reset(tars::Interpreter::createFromBuffer(buffer, size));
+    tars::ScheduleConfig config;
     _session = _interpreter->createSession(config);
     _inputTensor = _interpreter->getSessionInput(_session, NULL);
 
     _getInputShape(_calibrationFiles[0]);
     std::vector<float> tempData(_batch * _channels * _height, 0.0f);
-    tempInputTensor.reset(ace::Tensor::create(
+    tempInputTensor.reset(tars::Tensor::create(
         {_batch, _channels, _height}, halide_type_of<float>(), tempData.data(),
-        ace::Tensor::CAFFE));
+        tars::Tensor::CAFFE));
   }
-
-  MNN_ASSERT(_calibrationFileNum > _batch);
   const int trainIterations = _calibrationFileNum / _batch;
 
   model->clearCache();
@@ -1016,14 +1040,14 @@ void Calibration::_quantizeModelEMA() {
         for (int j = 0; j < _batch; j++) {
           auto curPtr =
               tempInputTensor->host<float>() + j * tempInputTensor->stride(0);
-          std::shared_ptr<ace::Tensor> tensorWarp(ace::Tensor::create(
+          std::shared_ptr<tars::Tensor> tensorWarp(tars::Tensor::create(
               {1, _channels, _height}, _inputTensor->getType(), curPtr,
-              ace::Tensor::CAFFE));
+              tars::Tensor::CAFFE));
           Helper::preprocessInput(_process.get(), _preprocessConfig, file,
                                   tensorWarp.get(), _inputType);
         }
         input = _Input({_batch, _channels, _height},
-                       ace::Express::Dimensionformat::NCHW,
+                       tars::Express::Dimensionformat::NCHW,
                        halide_type_of<float>());
         auto inputPtr = input->writeMap<float>();
         auto tempInputPtr = tempInputTensor->host<float>();
@@ -1032,7 +1056,7 @@ void Calibration::_quantizeModelEMA() {
         }
       }
     }
-    auto predicts = model->onForward({_Convert(input, NC4HW4)});
+    auto predicts = model->onForward({_Convert(input, originFormat)});
     for (auto& output : predicts) {
       auto ptr = output->readMap<float>();
     }
@@ -1046,12 +1070,16 @@ void Calibration::_quantizeModelEMA() {
   model->setIsTraining(false);
   exe->gc(Executor::PART);
   VARP forwardInput = nullptr;
-  if (_inputType == Helper::InputType::IMAGE) {
-    forwardInput = _Input({1, _channels, _preprocessConfig.targetHeight,
-                           _preprocessConfig.targetWidth},
-                          NC4HW4);
+  if (originInfo != nullptr && originDims.size() > 0) {
+    forwardInput = _Input(originDims, originFormat, originType);
   } else {
-    forwardInput = _Input({1, _channels, _height}, NC4HW4);
+    if (_inputType == Helper::InputType::IMAGE) {
+      forwardInput = _Input({1, _channels, _preprocessConfig.targetHeight,
+                             _preprocessConfig.targetWidth},
+                            NC4HW4);
+    } else {
+      forwardInput = _Input({1, _channels, _height}, NC4HW4);
+    }
   }
   forwardInput->setName(inputs[0]->name());
   auto predicts = model->onForward({forwardInput});
@@ -1082,7 +1110,7 @@ void Calibration::runQuantizeModel() {
   {
     flatbuffers::FlatBufferBuilder builderOutput(1024);
     builderOutput.ForceDefaults(true);
-    auto len = ace::Net::Pack(builderOutput, _originalModel);
+    auto len = tars::Net::Pack(builderOutput, _originalModel);
     builderOutput.Finish(len);
     std::ofstream output(_destModelFile);
     output.write((const char*)builderOutput.GetBufferPointer(),
@@ -1102,7 +1130,7 @@ void Calibration::dumpTensorScales(const std::string& modelFile) {
     const auto opType = op->type;
     const auto name = op->name;
 
-    if (opType == ace::OpType_Raster) {
+    if (opType == tars::OpType_Raster) {
       continue;
     }
 

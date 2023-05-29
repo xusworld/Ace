@@ -6,13 +6,12 @@
 //  Copyright © 2018, Alibaba Group Holding Limited
 //
 
-#include <glog/logging.h>
-
 #include <fstream>
 #include <sstream>
 #include <string>
 
 #include "calibration.hpp"
+#include "logkit.h"
 
 int main(int argc, const char* argv[]) {
   if (argc < 4) {
@@ -26,17 +25,18 @@ int main(int argc, const char* argv[]) {
   DLOG(INFO) << ">>> modelFile: " << modelFile;
   DLOG(INFO) << ">>> preTreatConfig: " << preTreatConfig;
   DLOG(INFO) << ">>> dstFile: " << dstFile;
-  std::unique_ptr<ace::NetT> netT;
+  std::unique_ptr<tars::NetT> netT;
   {
-    std::ifstream input(modelFile);
+    // std::ifstream input(modelFile);
+    std::ifstream input(modelFile, std::ifstream::in | std::ifstream::binary);
     std::ostringstream outputOs;
     outputOs << input.rdbuf();
-    netT = ace::UnPackNet(outputOs.str().c_str());
+    netT = tars::UnPackNet(outputOs.str().c_str());
   }
 
   // temp build net for inference
   flatbuffers::FlatBufferBuilder builder(1024);
-  auto offset = ace::Net::Pack(builder, netT.get());
+  auto offset = tars::Net::Pack(builder, netT.get());
   builder.Finish(offset);
   int size = builder.GetSize();
   auto ocontent = builder.GetBufferPointer();
@@ -49,7 +49,7 @@ int main(int argc, const char* argv[]) {
   memcpy(modelOriginal.get(), ocontent, size);
 
   netT.reset();
-  netT = ace::UnPackNet(modelOriginal.get());
+  netT = tars::UnPackNet(modelOriginal.get());
 
   // quantize model's weight
   DLOG(INFO) << "Calibrate the feature and quantize model...";

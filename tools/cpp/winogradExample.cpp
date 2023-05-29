@@ -6,7 +6,7 @@
 //  Copyright © 2018, Alibaba Group Holding Limited
 //
 
-#include <ace/MNNDefine.h>
+#include <MNN/MNNDefine.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -20,15 +20,15 @@ int main(int argc, const char* argv[]) {
   if (argc > 3) {
     interp = ::atof(argv[3]);
   }
-  ace::Math::WinogradGenerater generater(unit, kernelSize, interp);
+  tars::Math::WinogradGenerater generater(unit, kernelSize, interp);
   auto a = generater.A();
   auto b = generater.B();
   auto g = generater.G();
   MNN_PRINT("A=\n");
-  ace::Math::Matrix::print(a.get());
+  tars::Math::Matrix::print(a.get());
   MNN_PRINT("B=\n");
-  ace::Math::Matrix::print(b.get());
+  tars::Math::Matrix::print(b.get());
   MNN_PRINT("G=\n");
-  ace::Math::Matrix::print(g.get());
+  tars::Math::Matrix::print(g.get());
   return 0;
 }

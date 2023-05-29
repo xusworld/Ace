@@ -9,16 +9,17 @@
 #ifndef Profiler_hpp
 #define Profiler_hpp
 
-#include <ace/tensor.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <ace/Interpreter.hpp>
 #include <map>
 #include <string>
 #include <vector>
 
-namespace ace {
+#include "core/Interpreter.hpp"
+#include "core/tensor.h"
+
+namespace tars {
 
 /** Profiler for Ops */
 class Profiler {
@@ -48,6 +49,11 @@ class Profiler {
    */
   void printTimeByName(int loops = 1);
 
+  /**
+   * print op that flops / time is slow
+   */
+  void printSlowOp(const std::string& type, int topk, float limitRate);
+
  private:
   ~Profiler() = default;
 
@@ -74,6 +80,6 @@ class Profiler {
   Record& getNamedRecord(const OperatorInfo* info);
 };
 
-}  // namespace ace
+}  // namespace tars
 
 #endif /* Profiler_hpp */

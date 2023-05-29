@@ -1,10 +1,17 @@
-namespace ace;
+//
+//  MNN.fbs
+//  MNN
+//
+//  Created by MNN on 2019/1/4.
+//  Copyright © 2018, Alibaba Group Holding Limited
+//
 
-enum FrontendFramework : byte {
-  ONNX = 0,
-  CAFFE,
+namespace tars;
+enum NetSource : byte {
+  CAFFE = 0,
   TENSORFLOW,
   TFLITE,
+  ONNX,
   TORCH
 }
 

@@ -6,14 +6,13 @@
 //  Copyright © 2018, Alibaba Group Holding Limited
 //
 
-#include <ace/tensor.h>
-#include <glog/logging.h>
-
-#include <ace/ImageProcess.hpp>
+#include <MNN/ImageProcess.hpp>
 #include <set>
 #include <string>
 
-#include "ace_generated.h"
+#include "MNN_generated.h"
+#include "core/tensor.h"
+#include "logkit.h"
 
 #pragma once
 class Helper {
@@ -32,7 +31,7 @@ class Helper {
 
   static std::set<std::string> gNotNeedFeatureOp;
 
-  static std::set<ace::OpType> INT8SUPPORTED_OPS;
+  static std::set<tars::OpType> INT8SUPPORTED_OPS;
 
   static std::set<std::string> featureQuantizeMethod;
   static std::set<std::string> weightQuantizeMethod;
@@ -41,9 +40,9 @@ class Helper {
   static void readClibrationFiles(std::vector<std::string>& images,
                                   const std::string& filePath,
                                   int* usedImageNum);
-  static void preprocessInput(ace::CV::ImageProcess* pretreat,
+  static void preprocessInput(tars::CV::ImageProcess* pretreat,
                               PreprocessConfig PreprocessConfig,
-                              const std::string& filename, ace::Tensor* input,
+                              const std::string& filename, tars::Tensor* input,
                               InputType inputType);
   static void invertData(float* dst, const float* src, int size);
   static bool stringEndWith(std::string const& fullString,
